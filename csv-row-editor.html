@@ -9,9 +9,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --earth-bg: #f8f5ef;
+            --earth-surface: #ffffff;
+            --earth-panel: #f4efe7;
+            --earth-border: #e1dbd3;
+            --earth-text: #1f1c18;
+            --earth-muted: #6b625a;
+            --earth-accent: #b47a3c;
+            --earth-accent-dark: #8f5f2a;
+            --earth-soft: #f0ebe3;
+            --earth-sage: #4f4d48;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: var(--earth-bg);
+            color: var(--earth-text);
         }
 
         /* Custom scrollbar */
@@ -25,12 +39,12 @@
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
+            background: #cfc6ba;
             border-radius: 4px;
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+            background: #b3a899;
         }
 
         /* Smooth input transitions */
@@ -62,8 +76,8 @@
         .tag-pill {
             display: inline-flex;
             align-items: center;
-            background-color: #e0e7ff;
-            color: #4338ca;
+            background-color: #efe5d4;
+            color: #704422;
             padding: 2px 8px;
             border-radius: 9999px;
             font-size: 0.75rem;
@@ -84,12 +98,12 @@
     </style>
 </head>
 
-<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden">
 
     <!-- Header -->
-    <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
+    <header class="bg-[var(--earth-surface)] border-b border-[var(--earth-border)] px-6 py-4 flex justify-between items-center z-10">
         <div class="flex items-center gap-3">
-            <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-lg shadow-indigo-200">
+            <div class="bg-[var(--earth-accent)] text-white p-2 rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -100,14 +114,14 @@
                 </svg>
             </div>
             <div>
-                <h1 class="text-xl font-bold tracking-tight text-slate-900">CSV Studio</h1>
-                <p class="text-xs text-slate-500">Advanced Editor</p>
+                <h1 class="text-xl font-bold tracking-tight text-[#1f1c18]">CSV Studio</h1>
+                <p class="text-xs text-[#6b625a]">Advanced Editor</p>
             </div>
         </div>
 
         <div class="flex gap-3">
             <label for="fileInput"
-                class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-md font-medium text-sm transition flex items-center gap-2">
+                class="cursor-pointer bg-[var(--earth-soft)] hover:bg-[#e7dfd4] text-[#3b332c] px-4 py-2 rounded-md font-medium text-sm transition flex items-center gap-2 border border-[var(--earth-border)]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -119,7 +133,7 @@
             <input type="file" id="fileInput" accept=".csv" class="hidden">
 
             <button id="downloadBtn" disabled
-                class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md font-medium text-sm transition flex items-center gap-2 shadow-md">
+                class="bg-[var(--earth-accent)] hover:bg-[var(--earth-accent-dark)] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md font-medium text-sm transition flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -136,10 +150,10 @@
 
         <!-- Empty State -->
         <div id="emptyState"
-            class="absolute inset-0 z-20 bg-slate-50/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8">
-            <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-100 max-w-md w-full">
+            class="absolute inset-0 z-20 bg-[#f5f0e7]/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8">
+            <div class="bg-[var(--earth-surface)] p-8 rounded-2xl border border-[var(--earth-border)] max-w-md w-full">
                 <div
-                    class="bg-indigo-50 text-indigo-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    class="bg-[#f5ecde] text-[var(--earth-accent)] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -149,57 +163,57 @@
                         <path d="M10 9H8"></path>
                     </svg>
                 </div>
-                <h2 class="text-2xl font-bold text-slate-800 mb-2">No File Loaded</h2>
-                <p class="text-slate-500 mb-6">Upload a CSV to start editing. <br>Supports String, Number, Select &
+                <h2 class="text-2xl font-bold text-[#1f1c18] mb-2">No File Loaded</h2>
+                <p class="text-[#6b625a] mb-6">Upload a CSV to start editing. <br>Supports String, Number, Select &
                     Multi-select fields.</p>
                 <button onclick="document.getElementById('fileInput').click()"
-                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold transition shadow-lg shadow-indigo-200">Select
+                    class="w-full bg-[var(--earth-accent)] hover:bg-[var(--earth-accent-dark)] text-white py-3 rounded-lg font-semibold transition">Select
                     CSV File</button>
             </div>
         </div>
 
         <!-- Sidebar: Configuration -->
         <aside id="sidebar"
-            class="w-full lg:w-80 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 hidden z-10 shadow-lg lg:shadow-none">
-            <div class="p-4 border-b border-slate-100 bg-slate-50">
-                <h3 class="font-semibold text-slate-700 text-sm uppercase tracking-wider">Column Setup</h3>
+            class="w-full lg:w-80 bg-[var(--earth-surface)] border-r border-[var(--earth-border)] flex flex-col transition-all duration-300 hidden z-10">
+            <div class="p-4 border-b border-[var(--earth-border)] bg-[var(--earth-panel)]">
+                <h3 class="font-semibold text-[#4f4d48] text-sm uppercase tracking-wider">Column Setup</h3>
             </div>
             <div class="flex-1 overflow-y-auto p-2 custom-scrollbar" id="columnList">
                 <!-- Config Items injected here -->
             </div>
-            <div class="p-3 border-t border-slate-100 bg-slate-50 flex gap-2 justify-between">
+            <div class="p-3 border-t border-[var(--earth-border)] bg-[var(--earth-panel)] flex gap-2 justify-between">
                 <button id="selectAllCols"
-                    class="text-xs font-medium text-indigo-600 hover:bg-indigo-50 px-3 py-2 rounded transition flex-1">All</button>
+                    class="text-xs font-medium text-[var(--earth-accent)] hover:bg-[#f4ede4] px-3 py-2 rounded transition flex-1 border border-transparent">All</button>
                 <button id="deselectAllCols"
-                    class="text-xs font-medium text-slate-500 hover:bg-slate-100 px-3 py-2 rounded transition flex-1">None</button>
+                    class="text-xs font-medium text-[#6b625a] hover:bg-[#f4ede4] px-3 py-2 rounded transition flex-1 border border-transparent">None</button>
             </div>
         </aside>
 
         <!-- Editor Area -->
-        <section id="editorArea" class="flex-1 flex flex-col bg-slate-50/50 hidden">
+        <section id="editorArea" class="flex-1 flex flex-col bg-[var(--earth-panel)] hidden">
 
             <!-- Navigation Bar -->
-            <div class="flex items-center justify-between p-4 lg:px-8 lg:py-4 bg-white border-b border-slate-200">
+            <div class="flex items-center justify-between p-4 lg:px-8 lg:py-4 bg-[var(--earth-surface)] border-b border-[var(--earth-border)]">
                 <div class="flex flex-col">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Row</span>
-                    <span class="text-2xl font-bold text-slate-800 font-mono" id="rowCounter">#1</span>
+                    <span class="text-xs font-bold text-[#6b625a] uppercase tracking-wider">Row</span>
+                    <span class="text-2xl font-bold text-[#1f1c18] font-mono" id="rowCounter">#1</span>
                 </div>
 
-                <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
+                <div class="flex items-center bg-[var(--earth-soft)] p-1 rounded-lg border border-[var(--earth-border)]">
                     <button id="prevBtn"
-                        class="p-2 hover:bg-white hover:shadow-sm text-slate-600 hover:text-indigo-600 rounded-md transition disabled:opacity-30">
+                        class="p-2 hover:bg-[#fdfbf6] text-[#4f4d48] hover:text-[var(--earth-accent)] rounded-md transition disabled:opacity-30">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="15 18 9 12 15 6"></polyline>
                         </svg>
                     </button>
                     <div
-                        class="px-4 font-mono text-slate-500 text-sm border-x border-slate-200 mx-1 bg-white h-8 flex items-center rounded-sm">
-                        <span id="currentIndexDisplay">1</span> <span class="mx-1 text-slate-300">/</span> <span
+                        class="px-4 font-mono text-[#5f564f] text-sm border-x border-[#dcd4c8] mx-1 bg-[#fdfbf6] h-8 flex items-center rounded-sm">
+                        <span id="currentIndexDisplay">1</span> <span class="mx-1 text-[#b3a899]">/</span> <span
                             id="totalIndexDisplay">0</span>
                     </div>
                     <button id="nextBtn"
-                        class="p-2 hover:bg-white hover:shadow-sm text-slate-600 hover:text-indigo-600 rounded-md transition disabled:opacity-30">
+                        class="p-2 hover:bg-[#fdfbf6] text-[#4f4d48] hover:text-[var(--earth-accent)] rounded-md transition disabled:opacity-30">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="9 18 15 12 9 6"></polyline>
@@ -218,12 +232,12 @@
 
             <!-- Footer -->
             <div
-                class="bg-white border-t border-slate-200 px-6 py-2 text-xs text-slate-400 text-center flex justify-center gap-6">
-                <span><kbd class="font-sans bg-slate-100 border border-slate-300 rounded px-1 text-slate-600">Tab</kbd>
+                class="bg-[var(--earth-surface)] border-t border-[var(--earth-border)] px-6 py-2 text-xs text-[#6b625a] text-center flex justify-center gap-6">
+                <span><kbd class="font-sans bg-[var(--earth-soft)] border border-[var(--earth-border)] rounded px-1 text-[#4f4d48]">Tab</kbd>
                     Next Field</span>
-                <span><kbd class="font-sans bg-slate-100 border border-slate-300 rounded px-1 text-slate-600">Ctrl</kbd>
+                <span><kbd class="font-sans bg-[var(--earth-soft)] border border-[var(--earth-border)] rounded px-1 text-[#4f4d48]">Ctrl</kbd>
                     + <kbd
-                        class="font-sans bg-slate-100 border border-slate-300 rounded px-1 text-slate-600">Arrows</kbd>
+                        class="font-sans bg-[var(--earth-soft)] border border-[var(--earth-border)] rounded px-1 text-[#4f4d48]">Arrows</kbd>
                     Nav Rows</span>
             </div>
         </section>
@@ -231,24 +245,24 @@
 
     <!-- Toast -->
     <div id="toast"
-        class="fixed bottom-5 right-5 bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
+        class="fixed bottom-5 right-5 bg-[#1f1c18] text-white px-4 py-3 rounded-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
         <span id="toastMsg">Notification</span>
     </div>
 
     <!-- Custom Input Modal -->
     <div id="customModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm transform scale-95 transition-all duration-200"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-[#2d2015]/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-[var(--earth-surface)] rounded-xl p-6 w-full max-w-sm transform scale-95 transition-all duration-200 border border-[var(--earth-border)]"
             id="modalPanel">
-            <h3 id="modalTitle" class="text-lg font-bold text-slate-800 mb-2">Input Required</h3>
+            <h3 id="modalTitle" class="text-lg font-bold text-[#1f1c18] mb-2">Input Required</h3>
             <input type="text" id="modalInput"
-                class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-4 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                class="w-full border border-[var(--earth-border)] rounded-lg px-3 py-2 mb-4 focus:ring-2 focus:ring-[var(--earth-accent)] focus:border-[var(--earth-accent)] outline-none"
                 placeholder="Enter value...">
             <div class="flex justify-end gap-2">
                 <button id="modalCancel"
-                    class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition">Cancel</button>
+                    class="px-4 py-2 text-[#4f4d48] hover:bg-[var(--earth-soft)] rounded-lg text-sm font-medium transition">Cancel</button>
                 <button id="modalConfirm"
-                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition">Confirm</button>
+                    class="px-4 py-2 bg-[var(--earth-accent)] hover:bg-[var(--earth-accent-dark)] text-white rounded-lg text-sm font-medium transition">Confirm</button>
             </div>
         </div>
     </div>
@@ -400,7 +414,7 @@
             els.columnList.innerHTML = '';
             state.headers.forEach((header, index) => {
                 const wrapper = document.createElement('div');
-                wrapper.className = 'flex flex-col p-3 mb-2 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-indigo-300 transition';
+                wrapper.className = 'flex flex-col p-3 mb-2 bg-[var(--earth-surface)] border border-[var(--earth-border)] rounded-lg hover:border-[var(--earth-accent)] transition';
 
                 // Top row: Checkbox & Label
                 const topRow = document.createElement('div');
@@ -412,10 +426,10 @@
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.checked = state.visibleColumns.has(index);
-                checkbox.className = 'w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500';
+                checkbox.className = 'w-4 h-4 text-[var(--earth-accent)] rounded border-[var(--earth-border)] focus:ring-[var(--earth-accent)]';
 
                 const label = document.createElement('span');
-                label.className = 'text-sm font-medium text-slate-700 truncate select-none';
+                label.className = 'text-sm font-medium text-[#3b332c] truncate select-none';
                 label.innerText = header || `Column ${index + 1}`;
 
                 leftSide.appendChild(checkbox);
@@ -424,7 +438,7 @@
 
                 // Bottom row: Type Selector
                 const typeSelect = document.createElement('select');
-                typeSelect.className = 'text-xs border border-slate-200 rounded px-2 py-1 bg-slate-50 text-slate-600 focus:outline-none focus:border-indigo-500 w-full';
+                typeSelect.className = 'text-xs border border-[var(--earth-border)] rounded px-2 py-1 bg-[var(--earth-panel)] text-[#4f4d48] focus:outline-none focus:border-[var(--earth-accent)] w-full';
                 typeSelect.innerHTML = `
                     <option value="text">Text (String)</option>
                     <option value="number">Number</option>
@@ -509,7 +523,7 @@
             els.formContainer.classList.add('fade-in');
 
             if (state.data.length === 0) {
-                els.formContainer.innerHTML = `<div class="col-span-full text-center text-slate-400 italic">No data available</div>`;
+                els.formContainer.innerHTML = `<div class="col-span-full text-center text-[#6b625a] italic">No data available</div>`;
                 return;
             }
 
@@ -522,12 +536,12 @@
                 const cellValue = row[colIndex] || "";
 
                 const wrapper = document.createElement('div');
-                wrapper.className = 'bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all';
+                wrapper.className = 'bg-[var(--earth-surface)] p-4 rounded-xl border border-[var(--earth-border)] transition-all';
 
                 // Label
                 const label = document.createElement('label');
-                label.className = 'flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider mb-2';
-                label.innerHTML = `<span>${header}</span> <span class="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">${config.type}</span>`;
+                label.className = 'flex justify-between items-center text-xs font-bold text-[#6b625a] uppercase tracking-wider mb-2';
+                label.innerHTML = `<span>${header}</span> <span class="text-[10px] bg-[var(--earth-soft)] text-[#4f4d48] px-1.5 py-0.5 rounded">${config.type}</span>`;
                 wrapper.appendChild(label);
 
                 // Input based on type
@@ -535,7 +549,7 @@
 
                 if (config.type === 'text') {
                     inputEl = document.createElement('textarea');
-                    inputEl.className = 'input-field w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none';
+                    inputEl.className = 'input-field w-full bg-[var(--earth-soft)] border border-[var(--earth-border)] rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[var(--earth-accent)] focus:border-[var(--earth-accent)] outline-none resize-none';
                     inputEl.rows = 2;
                     inputEl.value = cellValue;
                     inputEl.addEventListener('input', (e) => updateCell(colIndex, e.target.value));
@@ -544,13 +558,13 @@
                     inputEl = document.createElement('input');
                     inputEl.type = 'number';
                     inputEl.step = 'any';
-                    inputEl.className = 'input-field w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none';
+                    inputEl.className = 'input-field w-full bg-[var(--earth-soft)] border border-[var(--earth-border)] rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[var(--earth-accent)] focus:border-[var(--earth-accent)] outline-none';
                     inputEl.value = cellValue;
                     inputEl.addEventListener('input', (e) => updateCell(colIndex, e.target.value));
                 }
                 else if (config.type === 'select') {
                     inputEl = document.createElement('select');
-                    inputEl.className = 'input-field w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none';
+                    inputEl.className = 'input-field w-full bg-[var(--earth-soft)] border border-[var(--earth-border)] rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[var(--earth-accent)] focus:border-[var(--earth-accent)] outline-none';
 
                     const nullOpt = document.createElement('option');
                     nullOpt.value = "";
@@ -577,7 +591,7 @@
                     // Add Create New Option
                     const createOpt = document.createElement('option');
                     createOpt.value = "__NEW__";
-                    createOpt.className = "font-bold text-indigo-600 bg-indigo-50";
+                    createOpt.className = "font-bold text-[var(--earth-accent)] bg-[#f4ede4]";
                     createOpt.text = "+ Create New Option...";
                     inputEl.appendChild(createOpt);
 
@@ -642,12 +656,12 @@
 
             // 1. Tags Area
             const tagsArea = document.createElement('div');
-            tagsArea.className = 'flex flex-wrap gap-1 bg-slate-50 border border-slate-200 rounded-lg p-2 min-h-[42px]';
+            tagsArea.className = 'flex flex-wrap gap-1 bg-[var(--earth-soft)] border border-[var(--earth-border)] rounded-lg p-2 min-h-[42px]';
 
             const renderTags = () => {
                 tagsArea.innerHTML = '';
                 if (selected.length === 0) {
-                    tagsArea.innerHTML = '<span class="text-slate-400 text-xs italic py-1">No items selected</span>';
+                    tagsArea.innerHTML = '<span class="text-[#6b625a] text-xs italic py-1">No items selected</span>';
                 }
                 selected.forEach(tag => {
                     const pill = document.createElement('span');
@@ -664,7 +678,7 @@
 
             // 2. Add Dropdown
             const addSelect = document.createElement('select');
-            addSelect.className = 'text-xs border border-slate-200 rounded p-1.5 bg-white text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none';
+            addSelect.className = 'text-xs border border-[var(--earth-border)] rounded p-1.5 bg-[var(--earth-surface)] text-[#4f4d48] focus:ring-2 focus:ring-[var(--earth-accent)] outline-none';
             addSelect.innerHTML = '<option value="">+ Add item...</option>';
 
             config.options.forEach(opt => {
@@ -677,7 +691,7 @@
             // Add Create New Option
             const createOpt = document.createElement('option');
             createOpt.value = "__NEW__";
-            createOpt.className = "font-bold text-indigo-600 bg-indigo-50";
+            createOpt.className = "font-bold text-[var(--earth-accent)] bg-[#f4ede4]";
             createOpt.text = "+ Create New Tag...";
             addSelect.appendChild(createOpt);
 
