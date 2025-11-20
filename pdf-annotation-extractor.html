@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Annotation Extractor</title>
+
+    <!-- Tailwind CSS with Typography Plugin (CRITICAL for rendering markdown styles) -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        earth: {
+                            50: '#fafaf9',
+                            100: '#f5f5f4',
+                            200: '#e7e5e4',
+                            300: '#d6d3d1',
+                            400: '#a8a29e',
+                            500: '#78716c',
+                            600: '#57534e',
+                            700: '#44403c',
+                            800: '#292524',
+                            900: '#1c1917',
+                        },
+                        sage: {
+                            100: '#ecfccb',
+                            200: '#d9f99d',
+                            500: '#84a98c',
+                            600: '#52796f',
+                        },
+                        // Renamed from terracotta to amethyst (Dull Purple)
+                        amethyst: {
+                            500: '#9f86c0',
+                            600: '#866fa3'
+                        }
+                    },
+                    // Customizing prose to fit the earth theme
+                    typography: (theme) => ({
+                        stone: {
+                            css: {
+                                '--tw-prose-body': theme('colors.earth.800'),
+                                '--tw-prose-headings': theme('colors.earth.900'),
+                                '--tw-prose-quotes': theme('colors.earth.600'),
+                                '--tw-prose-quote-borders': theme('colors.amethyst.500'),
+                                'blockquote': {
+                                    fontStyle: 'italic',
+                                    backgroundColor: theme('colors.earth.50'),
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '0.25rem',
+                                },
+                            },
+                        },
+                    }),
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5f4;
+            /* earth-100 */
+        }
+
+        h1,
+        h2,
+        h3,
+        .serif {
+            font-family: 'Lora', serif;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #e7e5e4;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #a8a29e;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #78716c;
+        }
+
+        .loader {
+            border: 3px solid #e7e5e4;
+            border-top: 3px solid #9f86c0;
+            /* amethyst-500 */
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* KaTeX adjustments for prose */
+        .katex-display {
+            margin: 1em 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+    </style>
+</head>
+
+<body class="text-earth-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-earth-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-earth-100 rounded-lg text-earth-600">
+                <i data-lucide="file-text"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-earth-900">PDF Annotation Extractor</h1>
+                <p class="text-xs text-earth-500">Extract visible annotations using AI</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4 text-sm">
+            <a href="#" onclick="document.getElementById('helpModal').classList.remove('hidden')"
+                class="text-earth-500 hover:text-amethyst-500 flex items-center gap-1 transition-colors">
+                <i data-lucide="help-circle" class="w-4 h-4"></i> How it works
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <main class="flex-1 flex overflow-hidden">
+
+        <!-- LEFT COLUMN: Configuration -->
+        <aside
+            class="w-full md:w-[450px] bg-white border-r border-earth-200 flex flex-col overflow-y-auto scrollbar-hide z-20 shadow-lg">
+
+            <div class="p-6 space-y-8">
+
+                <!-- Step 1: Upload -->
+                <section class="space-y-3">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-earth-800 text-white text-xs font-bold px-2 py-0.5 rounded-full">1</span>
+                        <h2 class="font-semibold text-earth-700">Upload Document</h2>
+                    </div>
+
+                    <div
+                        class="relative border-2 border-dashed border-earth-300 rounded-xl hover:border-amethyst-500 transition-colors group bg-earth-50 p-6 text-center cursor-pointer">
+                        <input type="file" id="pdfInput" accept=".pdf"
+                            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            onchange="handlePdfUpload(event)">
+                        <div class="flex flex-col items-center gap-2 text-earth-500 group-hover:text-earth-700">
+                            <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                            <span class="text-sm font-medium">Click to upload PDF</span>
+                            <span id="fileNameDisplay" class="text-xs text-earth-400">Supports standard PDF files</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Step 2: Configuration -->
+                <section class="space-y-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-earth-800 text-white text-xs font-bold px-2 py-0.5 rounded-full">2</span>
+                        <h2 class="font-semibold text-earth-700">Extraction Settings</h2>
+                    </div>
+
+                    <!-- Image Split -->
+                    <div>
+                        <label class="block text-xs font-semibold text-earth-500 uppercase tracking-wider mb-2">Image
+                            Slicing</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="setSplit(1)" id="split1"
+                                class="split-btn active ring-2 ring-offset-1 ring-amethyst-500 bg-earth-100 hover:bg-earth-200 py-2 rounded-lg text-sm border border-earth-200 transition-all">
+                                Full Page
+                            </button>
+                            <button onclick="setSplit(2)" id="split2"
+                                class="split-btn bg-earth-100 hover:bg-earth-200 py-2 rounded-lg text-sm border border-earth-200 transition-all">
+                                2 Parts
+                            </button>
+                            <button onclick="setSplit(3)" id="split3"
+                                class="split-btn bg-earth-100 hover:bg-earth-200 py-2 rounded-lg text-sm border border-earth-200 transition-all">
+                                3 Parts
+                            </button>
+                        </div>
+                        <p class="text-[10px] text-earth-400 mt-1">Splitting pages vertically helps AI focus on smaller
+                            details.</p>
+                    </div>
+
+                    <!-- AI Provider -->
+                    <div>
+                        <label class="block text-xs font-semibold text-earth-500 uppercase tracking-wider mb-2">AI
+                            Provider</label>
+                        <select id="aiProvider" onchange="toggleApiKeyInput()"
+                            class="w-full p-2.5 bg-earth-50 border border-earth-300 rounded-lg text-sm focus:ring-2 focus:ring-amethyst-500 focus:border-transparent outline-none">
+                            <option value="gemini">Google Gemini</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                        </select>
+                    </div>
+
+                    <!-- Model Name -->
+                    <div>
+                        <label class="block text-xs font-semibold text-earth-500 uppercase tracking-wider mb-2">Model
+                            Name</label>
+                        <input type="text" id="aiModel" value="gemini-2.5-flash"
+                            class="w-full p-2.5 bg-white border border-earth-300 rounded-lg text-sm focus:ring-2 focus:ring-amethyst-500 focus:border-transparent outline-none font-mono text-earth-600">
+                        <p class="text-[10px] text-earth-400 mt-1">Edit to specify a model version (e.g. gpt-4o,
+                            gemini-1.5-pro).</p>
+                    </div>
+
+                    <!-- API Key -->
+                    <div>
+                        <label class="block text-xs font-semibold text-earth-500 uppercase tracking-wider mb-2">API
+                            Key</label>
+                        <input type="password" id="apiKey" placeholder="Enter your API Key"
+                            class="w-full p-2.5 bg-white border border-earth-300 rounded-lg text-sm focus:ring-2 focus:ring-amethyst-500 focus:border-transparent outline-none font-mono">
+                        <p class="text-[10px] text-earth-400 mt-1">Keys are only used locally for the API request.</p>
+                    </div>
+                </section>
+
+                <!-- Step 3: Instructions -->
+                <section class="space-y-3">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-earth-800 text-white text-xs font-bold px-2 py-0.5 rounded-full">3</span>
+                        <h2 class="font-semibold text-earth-700">Instructions</h2>
+                    </div>
+
+                    <textarea id="userPrompt" rows="9"
+                        class="w-full p-3 bg-earth-50 border border-earth-300 rounded-lg text-sm focus:ring-2 focus:ring-amethyst-500 focus:border-transparent outline-none resize-none"
+                        placeholder="E.g., Extract only the red handwritten comments in the margins. Ignore typed text.">Extract all annotations, margin notes, highlights, and circled text from this document page image. Do not transcribe the main printed text unless it is heavily marked up. Extract in this format 
+```md
+> {document text}
+{new line}
+annotation
+```</textarea>
+                </section>
+
+                <!-- Action Button -->
+                <div class="pt-2 pb-6">
+                    <button id="processBtn" onclick="processDocuments()" disabled
+                        class="w-full bg-earth-800 hover:bg-earth-900 disabled:bg-earth-300 disabled:cursor-not-allowed text-white font-medium py-3 rounded-xl shadow-lg shadow-earth-200/50 transition-all flex justify-center items-center gap-2">
+                        <span>Start Extraction</span>
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- RIGHT COLUMN: Preview & Results -->
+        <div class="flex-1 bg-earth-100 flex flex-col overflow-hidden relative">
+
+            <!-- Tabs -->
+            <div class="bg-white border-b border-earth-200 px-6 pt-4 flex justify-between items-center text-sm">
+                <div class="flex gap-6">
+                    <button onclick="switchTab('preview')" id="tabPreview"
+                        class="pb-3 border-b-2 border-amethyst-500 font-medium text-earth-800 transition-colors">
+                        Page Selection (<span id="pageCountBadge">0</span>)
+                    </button>
+                    <button onclick="switchTab('results')" id="tabResults"
+                        class="pb-3 border-b-2 border-transparent text-earth-500 hover:text-earth-700 transition-colors">
+                        Extraction Results
+                    </button>
+                </div>
+                <!-- Extraction Complete Status (Right Aligned) -->
+                <span id="statusComplete"
+                    class="hidden pb-3 text-sage-600 text-xs font-bold flex items-center gap-1 animate-fade-in">
+                    <i data-lucide="check" class="w-4 h-4"></i> Extraction Complete
+                </span>
+            </div>
+
+            <!-- Tab Content: Preview -->
+            <div id="previewContent" class="flex-1 overflow-y-auto p-6">
+                <div id="emptyState" class="h-full flex flex-col items-center justify-center text-earth-400 space-y-4">
+                    <i data-lucide="file-search" class="w-16 h-16 opacity-50"></i>
+                    <p>Upload a PDF to view pages here</p>
+                </div>
+
+                <div id="thumbnailsContainer" class="hidden grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <!-- Thumbnails injected here -->
+                </div>
+            </div>
+
+            <!-- Tab Content: Results -->
+            <div id="resultsContent" class="hidden flex-1 overflow-hidden flex flex-col">
+
+                <!-- Progress Bar -->
+                <div id="progressContainer" class="hidden w-full bg-earth-200 h-1">
+                    <div id="progressBar" class="bg-amethyst-500 h-1 transition-all duration-300" style="width: 0%">
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col lg:flex-row h-full overflow-hidden">
+
+                    <!-- Image Log (Left side of results) -->
+                    <div
+                        class="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-earth-200 bg-earth-50 overflow-y-auto p-4 space-y-4">
+                        <h3
+                            class="text-xs font-bold uppercase text-earth-400 tracking-wider sticky top-0 bg-earth-50 py-2 z-10">
+                            Processed Slices (Click to review)</h3>
+                        <div id="processingLog" class="space-y-3 text-sm">
+                            <!-- Live logs of images being processed -->
+                        </div>
+                    </div>
+
+                    <!-- Final Markdown Result (Right side of results) -->
+                    <div class="flex-1 flex flex-col bg-white overflow-hidden">
+                        <div class="flex justify-between items-center p-4 border-b border-earth-100 bg-white z-10">
+                            <h3 class="font-serif font-medium text-lg text-earth-800">Combined Annotations</h3>
+                            <button onclick="copyResults()"
+                                class="text-earth-500 hover:text-amethyst-600 hover:bg-earth-50 p-2 rounded-lg transition-colors"
+                                title="Copy to Clipboard (Markdown)">
+                                <i data-lucide="copy" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        <!-- Add prose-stone to ensure prose styles are applied correctly -->
+                        <div id="markdownOutput"
+                            class="flex-1 overflow-y-auto p-6 prose prose-stone max-w-none prose-headings:font-serif prose-a:text-amethyst-600">
+                            <p class="text-earth-400 italic">Results will appear here...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Hidden Modal for Help -->
+    <div id="helpModal"
+        class="hidden fixed inset-0 bg-earth-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-serif text-xl font-bold text-earth-800">How to use</h3>
+                <button onclick="document.getElementById('helpModal').classList.add('hidden')"
+                    class="text-earth-400 hover:text-earth-800">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="space-y-3 text-sm text-earth-600 leading-relaxed">
+                <p>1. <strong>Upload a PDF</strong>: Drag and drop or click to select a file.</p>
+                <p>2. <strong>Select Pages</strong>: Click on the pages in the preview area you want to analyze.
+                    Unselected pages look faded.</p>
+                <p>3. <strong>Configure</strong>: Choose how to split images. Splitting into 2 or 3 parts helps AI see
+                    smaller handwriting better.</p>
+                <p>4. <strong>Provide API Key</strong>: This tool runs entirely in your browser. Your key is sent
+                    directly to the AI provider and never stored on any server.</p>
+                <p>5. <strong>Extract</strong>: Click start. You can click on any processed slice on the left to view
+                    the image and rerun the analysis if needed.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div id="lightboxModal"
+        class="hidden fixed inset-0 bg-earth-900/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden">
+            <!-- Header -->
+            <div class="p-4 border-b border-earth-200 flex justify-between items-center bg-earth-50">
+                <h3 class="font-medium text-earth-800" id="lightboxTitle">Page Review</h3>
+
+                <!-- Zoom Controls -->
+                <div class="flex items-center gap-2 bg-earth-100 rounded-lg p-1">
+                    <button onclick="zoomOut()" class="p-1 hover:bg-white rounded text-earth-600" title="Zoom Out">
+                        <i data-lucide="minus" class="w-4 h-4"></i>
+                    </button>
+                    <span id="zoomDisplay" class="text-xs font-mono w-12 text-center">100%</span>
+                    <button onclick="zoomIn()" class="p-1 hover:bg-white rounded text-earth-600" title="Zoom In">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
+                    <div class="w-px h-4 bg-earth-300 mx-1"></div>
+                    <button onclick="resetZoom()" class="p-1 hover:bg-white rounded text-earth-600" title="Reset Zoom">
+                        <i data-lucide="maximize" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <button onclick="closeLightbox()" class="text-earth-500 hover:text-earth-800">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- Main Content (Split View) -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <!-- Image Area (Top) -->
+                <div class="flex-1 overflow-auto bg-earth-800 relative" id="lightboxScrollArea">
+                    <div class="min-h-full min-w-full flex items-center justify-center p-8">
+                        <img id="lightboxImage" src=""
+                            class="max-w-full max-h-full shadow-lg rounded transition-transform duration-150 ease-out">
+                    </div>
+                </div>
+
+                <!-- Text Area (Bottom) -->
+                <div class="h-1/3 border-t border-earth-200 bg-white flex flex-col">
+                    <div
+                        class="px-4 py-2 bg-earth-50 border-b border-earth-100 text-xs font-bold uppercase text-earth-500 tracking-wider">
+                        Extracted Text
+                    </div>
+                    <div id="lightboxText" class="flex-1 p-4 overflow-y-auto prose prose-sm max-w-none prose-stone">
+                        <p class="text-earth-400 italic">No extraction data yet...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="p-4 border-t border-earth-200 bg-white flex justify-end gap-3">
+                <button onclick="closeLightbox()"
+                    class="px-4 py-2 text-earth-600 hover:bg-earth-100 rounded-lg transition-colors">Close</button>
+                <button id="rerunBtn"
+                    class="px-4 py-2 bg-amethyst-500 hover:bg-amethyst-600 text-white rounded-lg shadow transition-colors flex items-center gap-2">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Rerun Analysis
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Initialize marked options
+        marked.use({
+            breaks: true, // Convert \n to <br> - CRITICAL for AI response
+            gfm: true     // GitHub Flavored Markdown
+        });
+
+        // --- Configuration & State ---
+        // Ensure we point to the worker on CDN
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let pdfDoc = null;
+        let selectedPages = new Set();
+        let splitCount = 1; // 1, 2, or 3 vertical splits
+
+        // State structure: Array of objects { id, page, part, totalParts, base64, text, status }
+        let sliceState = [];
+
+        // Zoom State
+        let currentZoom = 1.0;
+
+        // Concurrency Limit for AI calls
+        const CONCURRENCY_LIMIT = 3;
+
+        // --- UI Helpers ---
+
+        function switchTab(tabName) {
+            const previewContent = document.getElementById('previewContent');
+            const resultsContent = document.getElementById('resultsContent');
+            const tabPreview = document.getElementById('tabPreview');
+            const tabResults = document.getElementById('tabResults');
+
+            if (tabName === 'preview') {
+                previewContent.classList.remove('hidden');
+                resultsContent.classList.add('hidden');
+
+                tabPreview.classList.add('border-amethyst-500', 'text-earth-800');
+                tabPreview.classList.remove('border-transparent', 'text-earth-500');
+
+                tabResults.classList.remove('border-amethyst-500', 'text-earth-800');
+                tabResults.classList.add('border-transparent', 'text-earth-500');
+            } else {
+                previewContent.classList.add('hidden');
+                resultsContent.classList.remove('hidden');
+
+                tabResults.classList.add('border-amethyst-500', 'text-earth-800');
+                tabResults.classList.remove('border-transparent', 'text-earth-500');
+
+                tabPreview.classList.remove('border-amethyst-500', 'text-earth-800');
+                tabPreview.classList.add('border-transparent', 'text-earth-500');
+            }
+        }
+
+        function toggleApiKeyInput() {
+            const provider = document.getElementById('aiProvider').value;
+            const apiKeyInput = document.getElementById('apiKey');
+            const modelInput = document.getElementById('aiModel');
+
+            if (provider === 'openai') {
+                apiKeyInput.placeholder = "sk-... (OpenAI Key)";
+                modelInput.value = "gpt-5-mini";
+            } else if (provider === 'anthropic') {
+                apiKeyInput.placeholder = "sk-ant-... (Anthropic Key)";
+                modelInput.value = "claude-haiku-4-5";
+            } else if (provider === 'gemini') {
+                apiKeyInput.placeholder = "AIza... (Google Gemini Key)";
+                modelInput.value = "gemini-2.5-flash";
+            }
+        }
+
+        function setSplit(num) {
+            splitCount = num;
+            // Update UI
+            document.querySelectorAll('.split-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-offset-1', 'ring-amethyst-500', 'active');
+            });
+            document.getElementById(`split${num}`).classList.add('ring-2', 'ring-offset-1', 'ring-amethyst-500', 'active');
+        }
+
+        // --- PDF Handling ---
+
+        async function handlePdfUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                alert("Please upload a valid PDF file.");
+                return;
+            }
+
+            // Update UI
+            document.getElementById('fileNameDisplay').textContent = file.name;
+            document.getElementById('emptyState').classList.add('hidden');
+            const container = document.getElementById('thumbnailsContainer');
+            container.innerHTML = '<div class="col-span-full text-center py-10 text-earth-500"><div class="loader mx-auto mb-2"></div>Rendering PDF...</div>';
+            container.classList.remove('hidden');
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                pdfDoc = await pdfjsLib.getDocument(arrayBuffer).promise;
+
+                renderThumbnails();
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = `<div class="col-span-full text-red-500 text-center">Error loading PDF: ${error.message}</div>`;
+            }
+        }
+
+        async function renderThumbnails() {
+            const container = document.getElementById('thumbnailsContainer');
+            container.innerHTML = '';
+            selectedPages.clear();
+
+            const totalPages = pdfDoc.numPages;
+
+            for (let i = 1; i <= totalPages; i++) {
+                // Select all by default
+                selectedPages.add(i);
+
+                // Container for the page
+                const pageWrapper = document.createElement('div');
+                pageWrapper.className = 'relative group cursor-pointer transition-all duration-200 transform hover:-translate-y-1';
+                pageWrapper.onclick = () => togglePageSelection(i, pageWrapper);
+                pageWrapper.id = `page-wrapper-${i}`;
+
+                // Render Canvas
+                const canvas = document.createElement('canvas');
+                canvas.className = 'w-full shadow-md rounded-lg border-2 border-amethyst-500';
+                canvas.id = `page-canvas-${i}`;
+
+                // Checkmark Overlay
+                const checkmark = document.createElement('div');
+                checkmark.className = 'absolute top-2 right-2 bg-amethyst-500 text-white rounded-full p-1 shadow-sm z-10 transition-opacity';
+                checkmark.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                checkmark.id = `check-${i}`;
+
+                // Page Number
+                const pageNum = document.createElement('div');
+                pageNum.className = 'text-center mt-2 text-xs font-medium text-earth-500';
+                pageNum.textContent = `Page ${i}`;
+
+                pageWrapper.appendChild(checkmark);
+                pageWrapper.appendChild(canvas);
+                pageWrapper.appendChild(pageNum);
+                container.appendChild(pageWrapper);
+
+                // Async Render
+                renderPageToCanvas(i, canvas);
+            }
+
+            updatePageCount();
+            document.getElementById('processBtn').disabled = false;
+        }
+
+        async function renderPageToCanvas(pageNum, canvas) {
+            const page = await pdfDoc.getPage(pageNum);
+            // Use a scale of 0.5 for thumbnails to save memory, logic uses higher scale later
+            const viewport = page.getViewport({ scale: 0.5 });
+
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+        }
+
+        function togglePageSelection(pageNum, wrapper) {
+            const check = document.getElementById(`check-${pageNum}`);
+            const canvas = document.getElementById(`page-canvas-${pageNum}`);
+
+            if (selectedPages.has(pageNum)) {
+                selectedPages.delete(pageNum);
+                check.classList.add('opacity-0');
+                canvas.classList.remove('border-amethyst-500');
+                canvas.classList.add('border-transparent', 'opacity-50');
+            } else {
+                selectedPages.add(pageNum);
+                check.classList.remove('opacity-0');
+                canvas.classList.add('border-amethyst-500');
+                canvas.classList.remove('border-transparent', 'opacity-50');
+            }
+            updatePageCount();
+        }
+
+        function updatePageCount() {
+            document.getElementById('pageCountBadge').textContent = selectedPages.size;
+            document.getElementById('processBtn').disabled = selectedPages.size === 0;
+        }
+
+        // --- Processing & Extraction Logic ---
+
+        // New: Queue Processor to run tasks concurrently
+        async function processQueue(queue, limit) {
+            const results = [];
+            const executing = [];
+
+            for (const task of queue) {
+                // Wrap task in a promise that removes itself from `executing` when done
+                const p = Promise.resolve().then(() => task());
+                results.push(p);
+
+                const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+                executing.push(e);
+
+                if (executing.length >= limit) {
+                    await Promise.race(executing);
+                }
+            }
+            return Promise.all(results);
+        }
+
+        async function processDocuments() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) {
+                alert("Please enter an API Key.");
+                return;
+            }
+
+            // Reset Results
+            sliceState = [];
+            document.getElementById('processingLog').innerHTML = '';
+            document.getElementById('markdownOutput').innerHTML = '<p class="text-earth-400 italic">Processing started...</p>';
+            document.getElementById('statusComplete').classList.add('hidden');
+
+            switchTab('results');
+            document.getElementById('progressContainer').classList.remove('hidden');
+
+            // Disable button
+            const btn = document.getElementById('processBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<div class="loader border-white border-t-earth-800 w-4 h-4"></div> Processing...`;
+
+            const pages = Array.from(selectedPages).sort((a, b) => a - b);
+
+            // Total units of work = pages * splits
+            const totalSteps = pages.length * splitCount;
+            let currentStep = 0;
+
+            const taskQueue = [];
+
+            try {
+                // 1. PREPARATION PHASE: Render all slices and create tasks
+                for (const pageNum of pages) {
+                    const page = await pdfDoc.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: 3.0 });
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+                    const sliceHeight = canvas.height / splitCount;
+
+                    for (let i = 0; i < splitCount; i++) {
+                        const sy = i * sliceHeight;
+
+                        const sliceCanvas = document.createElement('canvas');
+                        sliceCanvas.width = canvas.width;
+                        sliceCanvas.height = sliceHeight;
+                        const ctx = sliceCanvas.getContext('2d');
+                        ctx.drawImage(canvas, 0, sy, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+
+                        const base64Image = sliceCanvas.toDataURL('image/jpeg', 0.85);
+                        const cleanBase64 = base64Image.split(',')[1];
+
+                        // Create State Object
+                        const logId = `log-${pageNum}-${i}`;
+                        const sliceObj = {
+                            id: logId,
+                            page: pageNum,
+                            part: i + 1,
+                            totalParts: splitCount,
+                            base64: cleanBase64,
+                            fullBase64: base64Image,
+                            text: "",
+                            status: "pending"
+                        };
+                        sliceState.push(sliceObj);
+                        const stateIndex = sliceState.length - 1;
+
+                        // Add UI Log (Pending State)
+                        addLogEntry(sliceObj, stateIndex);
+
+                        // Create Task Closure
+                        const task = async () => {
+                            try {
+                                const result = await callAI(cleanBase64, i);
+                                console.log("AI Result for Page " + pageNum + " Part " + (i + 1) + ":", result);
+
+                                if (result && !result.includes("[NO_ANNOTATIONS]")) {
+                                    sliceState[stateIndex].text = result;
+                                    sliceState[stateIndex].status = 'success';
+                                    updateLogEntry(logId, 'success');
+                                } else {
+                                    sliceState[stateIndex].status = 'skipped';
+                                    updateLogEntry(logId, 'skipped');
+                                }
+                            } catch (err) {
+                                console.error(err);
+                                sliceState[stateIndex].text = `[ERROR: ${err.message}]`;
+                                sliceState[stateIndex].status = 'error';
+                                updateLogEntry(logId, 'error');
+                            }
+
+                            // Update Progress & UI per task
+                            currentStep++;
+                            document.getElementById('progressBar').style.width = `${(currentStep / totalSteps) * 100}%`;
+                            renderMarkdown();
+                        };
+
+                        taskQueue.push(task);
+                    }
+                }
+
+                // 2. EXECUTION PHASE: Run tasks concurrently
+                await processQueue(taskQueue, CONCURRENCY_LIMIT);
+
+                // Finish
+                document.getElementById('statusComplete').classList.remove('hidden');
+
+            } catch (e) {
+                alert("An error occurred during processing: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span>Start Extraction</span><i data-lucide="sparkles" class="w-4 h-4"></i>`;
+                lucide.createIcons();
+                setTimeout(() => {
+                    document.getElementById('progressContainer').classList.add('hidden');
+                }, 2000);
+            }
+        }
+
+        function addLogEntry(sliceObj, index) {
+            const container = document.getElementById('processingLog');
+            const div = document.createElement('div');
+            div.id = sliceObj.id;
+            div.onclick = () => openLightbox(index);
+            div.className = 'bg-white p-3 rounded-lg border border-earth-200 flex gap-3 items-center animate-pulse cursor-pointer hover:bg-earth-50 transition-colors';
+
+            const label = sliceObj.totalParts > 1 ? `Page ${sliceObj.page} - Part ${sliceObj.part}` : `Page ${sliceObj.page}`;
+
+            div.innerHTML = `
+                <img src="${sliceObj.fullBase64}" class="w-12 h-12 object-cover rounded border border-earth-200">
+                <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-earth-700">${label}</p>
+                    <p class="text-xs text-earth-500 status-text">Pending...</p>
+                </div>
+                <div class="status-icon">
+                    <div class="loader border-earth-200 border-t-amethyst-500 w-4 h-4"></div>
+                </div>
+            `;
+            // Append to bottom instead of prepend so they stay in order
+            container.appendChild(div);
+        }
+
+        function updateLogEntry(id, status) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.remove('animate-pulse');
+
+            const iconContainer = el.querySelector('.status-icon');
+            const textContainer = el.querySelector('.status-text');
+
+            if (status === 'success') {
+                el.classList.add('border-sage-500', 'bg-sage-100/50');
+                el.classList.remove('bg-white');
+                iconContainer.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 text-sage-600"></i>';
+                textContainer.textContent = "Annotations extracted";
+            } else if (status === 'skipped') {
+                el.classList.add('opacity-75');
+                iconContainer.innerHTML = '<i data-lucide="minus-circle" class="w-5 h-5 text-earth-400"></i>';
+                textContainer.textContent = "No annotations found";
+            } else {
+                el.classList.add('border-red-300', 'bg-red-50');
+                el.classList.remove('bg-white');
+                iconContainer.innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5 text-red-500"></i>';
+                textContainer.textContent = "Error processing";
+            }
+            lucide.createIcons();
+        }
+
+        function renderMarkdown() {
+            let combinedMarkdown = "";
+
+            // Rebuild markdown from state array
+            sliceState.forEach(slice => {
+                const header = slice.totalParts > 1 ? `**Page ${slice.page} (Part ${slice.part}):**` : `**Page ${slice.page}:**`;
+
+                if (slice.status === 'success' && slice.text) {
+                    combinedMarkdown += `${header}\n${slice.text}\n\n---\n\n`;
+                } else if (slice.status === 'error') {
+                    combinedMarkdown += `${header} ${slice.text}\n\n---\n\n`;
+                }
+            });
+
+            if (!combinedMarkdown) {
+                document.getElementById('markdownOutput').innerHTML = '<p class="text-earth-400 italic">Results will appear here...</p>';
+                return;
+            }
+
+            const outputDiv = document.getElementById('markdownOutput');
+            outputDiv.innerHTML = marked.parse(combinedMarkdown);
+
+            // Render LaTeX via KaTeX
+            if (window.renderMathInElement) {
+                renderMathInElement(outputDiv, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false },
+                        { left: '\\(', right: '\\)', display: false },
+                        { left: '\\[', right: '\\]', display: true }
+                    ],
+                    throwOnError: false
+                });
+            }
+        }
+
+        function copyResults() {
+            // Simplified copy: Strictly copy RAW Markdown text as requested
+            try {
+                // Generate plain text from state
+                let plainText = "";
+                sliceState.forEach(slice => {
+                    const header = slice.totalParts > 1 ? `**Page ${slice.page} (Part ${slice.part}):**` : `**Page ${slice.page}:**`;
+
+                    if (slice.status === 'success' && slice.text) {
+                        plainText += `${header}\n${slice.text}\n\n---\n\n`;
+                    }
+                });
+
+                const textarea = document.createElement('textarea');
+                textarea.value = plainText;
+                textarea.style.position = 'fixed';
+                textarea.style.left = '-9999px';
+                textarea.style.top = '0';
+                document.body.appendChild(textarea);
+
+                textarea.focus();
+                textarea.select();
+
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                if (successful) {
+                    alert("Copied results (Markdown) to clipboard!");
+                } else {
+                    alert("Could not copy automatically. Please select text and copy manually.");
+                }
+            } catch (err) {
+                console.error("Copy failed:", err);
+                alert("Error copying text. Please copy manually.");
+            }
+        }
+
+        // --- Lightbox & Zoom Logic ---
+
+        let currentLightboxIndex = -1;
+
+        function openLightbox(index) {
+            currentLightboxIndex = index;
+            const slice = sliceState[index];
+
+            // Reset zoom
+            resetZoom();
+
+            const label = slice.totalParts > 1 ? `Page ${slice.page} - Part ${slice.part}` : `Page ${slice.page}`;
+            document.getElementById('lightboxTitle').textContent = label;
+            document.getElementById('lightboxImage').src = slice.fullBase64;
+            document.getElementById('lightboxModal').classList.remove('hidden');
+
+            // Update Text Panel
+            const textPanel = document.getElementById('lightboxText');
+            if (slice.status === 'success' && slice.text) {
+                textPanel.innerHTML = marked.parse(slice.text);
+                if (window.renderMathInElement) {
+                    renderMathInElement(textPanel, {
+                        delimiters: [
+                            { left: '$$', right: '$$', display: true },
+                            { left: '$', right: '$', display: false }
+                        ]
+                    });
+                }
+            } else if (slice.status === 'skipped') {
+                textPanel.innerHTML = '<p class="text-earth-400 italic">No annotations detected.</p>';
+            } else if (slice.status === 'error') {
+                textPanel.innerHTML = `<p class="text-red-500">Error: ${slice.text}</p>`;
+            } else {
+                textPanel.innerHTML = '<p class="text-earth-400 italic">No data available or processing.</p>';
+            }
+
+            // Setup rerun button
+            const rerunBtn = document.getElementById('rerunBtn');
+            rerunBtn.onclick = () => rerunSlice(index);
+            rerunBtn.disabled = false;
+            rerunBtn.innerHTML = `<i data-lucide="refresh-cw" class="w-4 h-4"></i> Rerun Analysis`;
+            rerunBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            rerunBtn.classList.add('bg-amethyst-500', 'hover:bg-amethyst-600');
+            lucide.createIcons();
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightboxModal').classList.add('hidden');
+            currentLightboxIndex = -1;
+        }
+
+        // Zoom Functions
+        function updateZoomUI() {
+            const img = document.getElementById('lightboxImage');
+
+            // Logic:
+            // If zoom == 1: Use max-w-full max-h-full (Fit Mode)
+            // If zoom > 1: Remove max constraints, set width explicitly to expand
+
+            if (currentZoom <= 1.0) {
+                img.style.width = 'auto';
+                img.style.height = 'auto';
+                img.classList.add('max-w-full', 'max-h-full');
+            } else {
+                img.classList.remove('max-w-full', 'max-h-full');
+                // Calculate percent width relative to container, assuming 1.0 fits nicely
+                // Standard "Fit" might be less than 100% if image is vertical. 
+                // Simple approximation: just set width %
+                img.style.width = `${currentZoom * 100}%`;
+                img.style.height = 'auto';
+            }
+
+            document.getElementById('zoomDisplay').textContent = `${Math.round(currentZoom * 100)}%`;
+        }
+
+        function zoomIn() {
+            if (currentZoom < 3.0) {
+                currentZoom += 0.25;
+                updateZoomUI();
+            }
+        }
+
+        function zoomOut() {
+            if (currentZoom > 0.25) {
+                currentZoom -= 0.25;
+                updateZoomUI();
+            }
+        }
+
+        function resetZoom() {
+            currentZoom = 1.0;
+            updateZoomUI();
+        }
+
+        async function rerunSlice(index) {
+            const slice = sliceState[index];
+            const btn = document.getElementById('rerunBtn');
+
+            // Update UI for loading
+            btn.disabled = true;
+            btn.innerHTML = `<div class="loader border-white border-t-transparent w-4 h-4"></div> Analyzing...`;
+            btn.classList.remove('bg-amethyst-500', 'hover:bg-amethyst-600');
+            btn.classList.add('bg-gray-400', 'cursor-not-allowed');
+
+            // Update Log Status
+            const logEl = document.getElementById(slice.id);
+            const iconContainer = logEl.querySelector('.status-icon');
+            const textContainer = logEl.querySelector('.status-text');
+
+            logEl.className = 'bg-white p-3 rounded-lg border border-earth-200 flex gap-3 items-center animate-pulse cursor-pointer hover:bg-earth-50 transition-colors';
+            iconContainer.innerHTML = `<div class="loader border-earth-200 border-t-amethyst-500 w-4 h-4"></div>`;
+            textContainer.textContent = "Re-analyzing...";
+
+            try {
+                const result = await callAI(slice.base64, slice.part);
+                console.log("Rerun AI Result:", result);
+
+                if (result && !result.includes("[NO_ANNOTATIONS]")) {
+                    sliceState[index].text = result;
+                    sliceState[index].status = 'success';
+                    updateLogEntry(slice.id, 'success');
+                } else {
+                    sliceState[index].status = 'skipped';
+                    updateLogEntry(slice.id, 'skipped');
+                }
+            } catch (err) {
+                console.error(err);
+                sliceState[index].text = `[ERROR: ${err.message}]`;
+                sliceState[index].status = 'error';
+                updateLogEntry(slice.id, 'error');
+            }
+
+            // Re-render output
+            renderMarkdown();
+            // Refresh lightbox content if still open
+            if (currentLightboxIndex === index) {
+                openLightbox(index);
+            } else {
+                closeLightbox();
+            }
+        }
+
+        // --- AI API Calls ---
+
+        async function callAI(base64Image, index) {
+            const provider = document.getElementById('aiProvider').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const userInstructions = document.getElementById('userPrompt').value;
+
+            // Enhanced Prompt Engineering to force formatting
+            const systemPrompt = `You are a strict data extraction assistant specializing in extracting annotations and visible edits from document images.
+            
+            USER INSTRUCTIONS (FOLLOW THESE EXACTLY):
+            ${userInstructions}
+
+            CRITICAL FORMATTING RULES:
+            1. If the user requests a specific format (e.g., using blockquotes '>' for context), you MUST use that exact Markdown syntax.
+            2. Ensure there are actual newlines (\n) between the context and the annotation as requested.
+            3. Do NOT output conversational text like "Here are the annotations". Output ONLY the extracted data.
+            4. If there are no annotations or relevant markings visible in this specific image slice, strictly return the string: "[NO_ANNOTATIONS]".
+            5. Do not describe the visual layout (e.g., "There is text on the left"). Just extract the content.`;
+
+            console.log("System Prompt generated:", systemPrompt);
+
+            if (provider === 'openai') {
+                return await callOpenAI(apiKey, base64Image, systemPrompt);
+            } else if (provider === 'anthropic') {
+                return await callAnthropic(apiKey, base64Image, systemPrompt);
+            } else if (provider === 'gemini') {
+                return await callGemini(apiKey, base64Image, systemPrompt);
+            }
+        }
+
+        async function callOpenAI(key, b64, prompt) {
+            const modelName = document.getElementById('aiModel').value;
+            console.log("Calling OpenAI...", { model: modelName });
+
+            const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${key}`
+                },
+                body: JSON.stringify({
+                    model: modelName,
+                    messages: [
+                        {
+                            role: "user",
+                            content: [
+                                { type: "text", text: prompt },
+                                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${b64}` } }
+                            ]
+                        }
+                    ],
+                    max_tokens: 500
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                console.error("OpenAI API Error:", err);
+                throw new Error(err.error?.message || "OpenAI Error");
+            }
+            const data = await response.json();
+            console.log("OpenAI Response:", data);
+            return data.choices[0].message.content;
+        }
+
+        async function callAnthropic(key, b64, prompt) {
+            const modelName = document.getElementById('aiModel').value;
+            console.log("Calling Anthropic...", { model: modelName });
+
+            const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "x-api-key": key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                    "anthropic-dangerous-direct-browser-access": "true"
+                },
+                body: JSON.stringify({
+                    model: modelName,
+                    max_tokens: 1024,
+                    messages: [
+                        {
+                            role: "user",
+                            content: [
+                                {
+                                    type: "image",
+                                    source: {
+                                        type: "base64",
+                                        media_type: "image/jpeg",
+                                        data: b64
+                                    }
+                                },
+                                {
+                                    type: "text",
+                                    text: prompt
+                                }
+                            ]
+                        }
+                    ]
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                console.error("Anthropic API Error:", err);
+                throw new Error(err.error?.message || "Anthropic Error");
+            }
+            const data = await response.json();
+            console.log("Anthropic Response:", data);
+            return data.content[0].text;
+        }
+
+        async function callGemini(key, b64, prompt) {
+            const modelName = document.getElementById('aiModel').value;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`;
+            console.log("Calling Gemini...", { model: modelName });
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: prompt },
+                            {
+                                inline_data: {
+                                    mime_type: "image/jpeg",
+                                    data: b64
+                                }
+                            }
+                        ]
+                    }]
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                console.error("Gemini API Error:", err);
+                throw new Error(err.error?.message || "Gemini Error");
+            }
+            const data = await response.json();
+            console.log("Gemini Response:", data);
+            return data.candidates[0].content.parts[0].text;
+        }
+
+    </script>
+</body>
+
+</html>
