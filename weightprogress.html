@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FluxScale | Adaptive Weight Planner</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        slate: {
+                            850: '#172033',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        /* Global Transitions */
+        body,
+        .card,
+        .input-surface,
+        nav,
+        .switcher-indicator,
+        .switcher-label {
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+
+        /* New Input Surface Style */
+        .input-surface {
+            @apply bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-transparent focus-within:bg-white dark:focus-within:bg-slate-800 focus-within:border-teal-500/30 focus-within:ring-4 focus-within:ring-teal-500/10 transition-all;
+        }
+
+        .input-label-micro {
+            @apply text-[9px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1;
+        }
+
+        .ghost-input {
+            @apply w-full bg-transparent text-slate-900 dark:text-white font-bold outline-none placeholder-slate-300 dark:placeholder-slate-600 p-0 border-none focus:ring-0;
+        }
+
+        /* Remove number spinners */
+        .ghost-input::-webkit-outer-spin-button,
+        .ghost-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .ghost-input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* Stat Card Styling */
+        .stat-card {
+            @apply bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 flex flex-col justify-between h-full relative overflow-hidden shadow-sm;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-sans selection:bg-teal-500/20">
+
+    <!-- Navigation -->
+    <nav
+        class="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800">
+        <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-8 h-8 bg-gradient-to-br from-teal-400 to-teal-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
+                    <i class="ph-bold ph-trend-down text-lg"></i>
+                </div>
+                <span class="font-bold text-xl tracking-tight text-slate-800 dark:text-white">FluxScale</span>
+            </div>
+
+            <!-- Theme Toggle -->
+            <div
+                class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-full p-1 border border-slate-200 dark:border-slate-700">
+                <button onclick="setTheme('light')" id="theme-light"
+                    class="p-1.5 rounded-full text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"><i
+                        class="ph-fill ph-sun text-xs"></i></button>
+                <button onclick="setTheme('system')" id="theme-system"
+                    class="p-1.5 rounded-full text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"><i
+                        class="ph-fill ph-desktop text-xs"></i></button>
+                <button onclick="setTheme('dark')" id="theme-dark"
+                    class="p-1.5 rounded-full text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"><i
+                        class="ph-fill ph-moon text-xs"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+            <!-- LEFT COLUMN: Controls -->
+            <div class="lg:col-span-5 space-y-6">
+
+                <!-- New Biometrics Design -->
+                <div
+                    class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <div
+                                class="bg-teal-50 dark:bg-teal-900/20 p-1.5 rounded-lg text-teal-600 dark:text-teal-400">
+                                <i class="ph-duotone ph-user text-lg"></i>
+                            </div>
+                            Biometrics
+                        </h2>
+                    </div>
+
+                    <!-- Profile Row -->
+                    <div class="grid grid-cols-2 gap-3 mb-5">
+                        <!-- Gender -->
+                        <div class="input-surface px-3 py-2 relative group">
+                            <label class="input-label-micro">Gender</label>
+                            <div class="relative flex items-center">
+                                <select id="gender"
+                                    class="w-full bg-transparent text-sm font-bold text-slate-900 dark:text-white outline-none border-none focus:ring-0 p-0 appearance-none cursor-pointer z-10">
+                                    <option value="male" class="bg-white dark:bg-slate-800">Male</option>
+                                    <option value="female" selected class="bg-white dark:bg-slate-800">Female</option>
+                                </select>
+                                <div
+                                    class="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                    <i class="ph-bold ph-caret-down"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Age -->
+                        <div
+                            class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex items-center shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-colors group">
+                            <div class="w-2.5 h-2.5 rounded-full bg-indigo-400 ml-1 mr-3 shadow-sm"></div>
+                            <div>
+                                <span class="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Age</span>
+                                <div class="flex items-baseline gap-1">
+                                    <input type="number" id="age" value="30"
+                                        class="bg-transparent w-full text-lg font-bold text-slate-800 dark:text-white outline-none p-0">
+                                    <span class="text-[10px] font-bold text-slate-400">yrs</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Height Row -->
+                    <div class="mb-6">
+                        <div class="flex justify-end mb-2">
+                            <!-- Height Switcher (Sliding Pill) -->
+                            <button id="height-toggle-btn"
+                                class="group relative h-6 w-20 bg-slate-100 dark:bg-slate-800 rounded-md p-0.5 cursor-pointer transition-colors select-none">
+                                <div class="absolute top-0.5 left-0.5 h-5 w-[calc(50%-2px)] bg-white dark:bg-slate-600 rounded shadow-sm transition-transform duration-300 ease-out"
+                                    id="height-indicator"></div>
+                                <div
+                                    class="relative z-10 flex w-full h-full text-[9px] font-bold uppercase tracking-wider">
+                                    <div class="w-1/2 flex items-center justify-center transition-colors text-slate-400"
+                                        id="lbl-ft">FT</div>
+                                    <div class="w-1/2 flex items-center justify-center transition-colors" id="lbl-cm">CM
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+
+                        <div
+                            class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex items-center shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-colors group">
+                            <div class="w-2.5 h-2.5 rounded-full bg-blue-400 ml-1 mr-3 shadow-sm shrink-0"></div>
+                            <div class="w-full">
+                                <span class="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Height</span>
+
+                                <!-- Metric -->
+                                <div id="height-metric-inputs" class="flex items-baseline gap-1">
+                                    <input type="number" id="height-cm" value="159"
+                                        class="bg-transparent w-full text-lg font-bold text-slate-800 dark:text-white outline-none p-0">
+                                    <span class="text-[10px] font-bold text-slate-400">cm</span>
+                                </div>
+
+                                <!-- Imperial -->
+                                <div id="height-imperial-inputs" class="hidden items-center gap-3 w-full">
+                                    <div class="flex items-baseline gap-1 flex-1">
+                                        <input type="number" id="height-ft" value="5"
+                                            class="bg-transparent w-full text-lg font-bold text-slate-800 dark:text-white outline-none p-0">
+                                        <span class="text-[10px] font-bold text-slate-400">ft</span>
+                                    </div>
+                                    <div class="w-px h-4 bg-slate-100 dark:bg-slate-800 shrink-0"></div>
+                                    <div class="flex items-baseline gap-1 flex-1">
+                                        <input type="number" id="height-in" value="3"
+                                            class="bg-transparent w-full text-lg font-bold text-slate-800 dark:text-white outline-none p-0">
+                                        <span class="text-[10px] font-bold text-slate-400">in</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weight Journey Section -->
+                    <div class="relative">
+                        <div class="flex justify-between items-center mb-3 pl-1">
+                            <label class="input-label-micro mb-0">Weight Journey</label>
+
+                            <!-- Weight Switcher (Sliding Pill) -->
+                            <button id="weight-toggle-btn"
+                                class="group relative h-6 w-20 bg-slate-100 dark:bg-slate-800 rounded-md p-0.5 cursor-pointer transition-colors select-none">
+                                <div class="absolute top-0.5 left-0.5 h-5 w-[calc(50%-2px)] bg-white dark:bg-slate-600 rounded shadow-sm transition-transform duration-300 ease-out"
+                                    id="weight-indicator"></div>
+                                <div
+                                    class="relative z-10 flex w-full h-full text-[9px] font-bold uppercase tracking-wider">
+                                    <div class="w-1/2 flex items-center justify-center transition-colors" id="lbl-lbs">
+                                        LBS</div>
+                                    <div class="w-1/2 flex items-center justify-center transition-colors text-slate-400"
+                                        id="lbl-kg">KG</div>
+                                </div>
+                            </button>
+                        </div>
+
+                        <div class="relative space-y-3">
+                            <!-- Connector Line -->
+                            <div
+                                class="absolute left-[22px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-slate-200 via-slate-300 to-teal-500 dark:from-slate-700 dark:via-slate-700 dark:to-teal-500/50 z-0 rounded-full">
+                            </div>
+
+                            <!-- Current Weight -->
+                            <div
+                                class="relative z-10 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex justify-between items-center shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-colors group">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600 group-focus-within:bg-slate-400 transition-colors ml-2">
+                                    </div>
+                                    <div>
+                                        <span
+                                            class="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Starting</span>
+                                        <div class="flex items-baseline gap-1">
+                                            <input type="number" id="current-weight" value="150"
+                                                class="bg-transparent w-20 text-lg font-bold text-slate-800 dark:text-white outline-none p-0">
+                                            <span
+                                                class="weight-unit-label text-[10px] font-bold text-slate-400">lbs</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="bmi-current-badge"
+                                    class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-slate-50 dark:bg-slate-800 text-slate-500 transition-colors">
+                                    BMI --</div>
+                            </div>
+
+                            <!-- Target Weight -->
+                            <div
+                                class="relative z-10 bg-white dark:bg-slate-900 rounded-xl border border-teal-100 dark:border-teal-900/30 p-3 flex justify-between items-center shadow-sm ring-1 ring-teal-500/10 hover:ring-teal-500/30 transition-all group">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-teal-500 shadow-sm shadow-teal-500/50 ml-2">
+                                    </div>
+                                    <div>
+                                        <span
+                                            class="text-[9px] font-bold uppercase text-teal-600 dark:text-teal-400 block mb-0.5">Goal</span>
+                                        <div class="flex items-baseline gap-1">
+                                            <input type="number" id="target-weight" value="115"
+                                                class="bg-transparent w-20 text-lg font-bold text-teal-600 dark:text-teal-400 outline-none p-0">
+                                            <span
+                                                class="weight-unit-label text-[10px] font-bold text-teal-600/50 dark:text-teal-400/50">lbs</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="bmi-target-badge"
+                                    class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 transition-colors">
+                                    BMI --</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Energy Section (Simplified to match) -->
+                <!-- Energy Section (Simplified to match) -->
+                <div
+                    class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+                    <div class="flex justify-between items-end">
+                        <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <div class="bg-amber-50 dark:bg-amber-900/20 p-1.5 rounded-lg text-amber-500">
+                                <i class="ph-duotone ph-lightning text-lg"></i>
+                            </div>
+                            Energy
+                        </h3>
+
+                        <!-- Mode Switch -->
+                        <button id="tdee-mode-btn"
+                            class="group relative h-6 w-20 bg-slate-100 dark:bg-slate-800 rounded-md p-0.5 cursor-pointer transition-colors select-none">
+                            <div class="absolute top-0.5 left-0.5 h-5 w-[calc(50%-2px)] bg-white dark:bg-slate-600 rounded shadow-sm transition-transform duration-300 ease-out"
+                                id="mode-indicator"></div>
+                            <div class="relative z-10 flex w-full h-full text-[9px] font-bold uppercase tracking-wider">
+                                <div class="w-1/2 flex items-center justify-center transition-colors" id="lbl-auto">Auto
+                                </div>
+                                <div class="w-1/2 flex items-center justify-center transition-colors text-slate-400"
+                                    id="lbl-manual">Set</div>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Daily Intake -->
+                    <div
+                        class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex items-center shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-colors group">
+                        <div class="w-2.5 h-2.5 rounded-full bg-amber-400 ml-1 mr-3 shadow-sm"></div>
+                        <div>
+                            <span class="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Daily Intake</span>
+                            <div class="flex items-baseline gap-1">
+                                <input type="number" id="calories-in" value="2000"
+                                    class="bg-transparent w-full text-lg font-bold text-slate-800 dark:text-white outline-none p-0">
+                                <span class="text-[10px] font-bold text-slate-400">kcal</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Auto Mode -->
+                    <div id="mode-auto" class="animate-in fade-in slide-in-from-top-1 duration-300">
+                        <div class="input-surface px-4 py-3 relative">
+                            <label class="input-label-micro">Activity Level</label>
+                            <div class="relative flex items-center">
+                                <select id="activity-level"
+                                    class="w-full bg-transparent text-sm font-bold text-slate-900 dark:text-white outline-none border-none focus:ring-0 p-0 appearance-none cursor-pointer z-10">
+                                    <option value="1.2" class="bg-white dark:bg-slate-800">Sedentary (Office)</option>
+                                    <option value="1.375" selected class="bg-white dark:bg-slate-800">Light (1-2
+                                        days/wk)</option>
+                                    <option value="1.55" class="bg-white dark:bg-slate-800">Moderate (3-5 days/wk)
+                                    </option>
+                                    <option value="1.725" class="bg-white dark:bg-slate-800">Heavy (6-7 days/wk)
+                                    </option>
+                                    <option value="1.9" class="bg-white dark:bg-slate-800">Athlete (2x daily)</option>
+                                </select>
+                                <div
+                                    class="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                    <i class="ph-bold ph-caret-down"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manual Mode -->
+                    <div id="mode-manual" class="hidden animate-in fade-in slide-in-from-top-1 duration-300">
+                        <div
+                            class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex items-center shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-colors group">
+                            <div class="w-2.5 h-2.5 rounded-full bg-orange-500 ml-1 mr-3 shadow-sm"></div>
+                            <div>
+                                <span class="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Fixed
+                                    TDEE</span>
+                                <div class="flex items-baseline gap-1">
+                                    <input type="number" id="custom-expenditure" placeholder="2500"
+                                        class="bg-transparent w-full text-lg font-bold text-slate-800 dark:text-white outline-none p-0">
+                                    <span class="text-[10px] font-bold text-slate-400">kcal</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Viz -->
+            <div class="lg:col-span-7 flex flex-col gap-6 h-full">
+
+                <!-- KPI Row -->
+                <div class="grid grid-cols-3 gap-4">
+                    <!-- TDEE -->
+                    <div class="stat-card group">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start TDEE</span>
+                        <div class="mt-2 flex items-baseline gap-1">
+                            <span class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight"
+                                id="stat-tdee">--</span>
+                            <span class="text-xs font-bold text-slate-400">kcal</span>
+                        </div>
+                        <i
+                            class="ph-duotone ph-fire absolute right-3 bottom-3 text-4xl text-teal-500/10 group-hover:text-teal-500/20 transition-colors"></i>
+                    </div>
+
+                    <!-- Date -->
+                    <div class="stat-card group">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Goal Date</span>
+                        <div class="mt-2">
+                            <span class="text-xl font-bold text-slate-900 dark:text-white tracking-tight block truncate"
+                                id="stat-date">--</span>
+                        </div>
+                        <i
+                            class="ph-duotone ph-calendar-check absolute right-3 bottom-3 text-4xl text-indigo-500/10 group-hover:text-indigo-500/20 transition-colors"></i>
+                    </div>
+
+                    <!-- Duration -->
+                    <div class="stat-card group">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Duration</span>
+                        <div class="mt-2 flex items-baseline gap-1">
+                            <span class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight"
+                                id="stat-duration">--</span>
+                            <span class="text-xs font-bold text-slate-400">days</span>
+                        </div>
+                        <i
+                            class="ph-duotone ph-hourglass absolute right-3 bottom-3 text-4xl text-rose-500/10 group-hover:text-rose-500/20 transition-colors"></i>
+                    </div>
+                </div>
+
+                <!-- Chart Section -->
+                <div
+                    class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex-grow flex flex-col min-h-[500px] shadow-sm relative">
+                    <!-- Header -->
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-8 bg-teal-500 rounded-full"></div>
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-800 dark:text-white">Trajectory</h3>
+                                <p class="text-xs text-slate-400 font-medium">Projected weight loss curve</p>
+                            </div>
+                        </div>
+
+                        <!-- Chart Unit Toggle -->
+                        <button id="chart-unit-toggle"
+                            class="text-[10px] font-bold uppercase tracking-wider bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors border border-slate-100 dark:border-slate-700">
+                            Display: <span id="chart-unit-label" class="text-teal-600 dark:text-teal-400">LBS</span>
+                        </button>
+                    </div>
+
+                    <!-- Canvas -->
+                    <div class="relative w-full flex-grow">
+                        <canvas id="weightChart"></canvas>
+                    </div>
+
+                    <!-- Alert Overlay -->
+                    <div id="alert-box"
+                        class="mt-4 hidden p-4 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm rounded-xl border border-amber-100 dark:border-amber-800/50 flex gap-3 items-start animate-fade-in font-medium">
+                        <i class="ph-fill ph-warning-circle text-lg shrink-0 mt-0.5"></i>
+                        <span id="alert-msg">Alert content</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- STORAGE KEY ---
+        const STORAGE_KEY = 'flux_scale_data_v6';
+
+        // --- THEME ENGINE ---
+        const themeBtns = {
+            light: document.getElementById('theme-light'),
+            dark: document.getElementById('theme-dark'),
+            system: document.getElementById('theme-system'),
+        };
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'system';
+            setTheme(savedTheme);
+        }
+
+        function setTheme(theme) {
+            const html = document.documentElement;
+            localStorage.setItem('theme', theme);
+
+            Object.values(themeBtns).forEach(btn => {
+                btn.classList.remove('bg-white', 'dark:bg-slate-600', 'shadow-sm', 'text-teal-600', 'dark:text-white');
+                btn.classList.add('text-slate-500');
+            });
+
+            const activeBtn = themeBtns[theme];
+            activeBtn.classList.remove('text-slate-500');
+            activeBtn.classList.add('bg-white', 'dark:bg-slate-600', 'shadow-sm', 'text-teal-600', 'dark:text-white');
+
+            if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                html.classList.add('dark');
+            } else {
+                html.classList.remove('dark');
+            }
+
+            if (typeof updateSimulation === 'function') {
+                setTimeout(() => { if (chartInstance) updateSimulation(); }, 50);
+            }
+        }
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (localStorage.getItem('theme') === 'system') setTheme('system');
+        });
+
+        initTheme();
+
+        // --- APP STATE & PERSISTENCE ---
+        let state = {
+            inputUnits: { height: 'metric', weight: 'imperial' },
+            chartUnit: 'imperial',
+            isManualTDEE: false,
+            inputs: {
+                gender: 'female',
+                age: '30',
+                heightFt: '5',
+                heightIn: '3',
+                heightCm: '159',
+                weightCurrent: '150',
+                weightTarget: '115',
+                caloriesIn: '2000',
+                activityLevel: '1.375',
+                customExpenditure: ''
+            }
+        };
+
+        // --- DOM ELEMENTS ---
+        const dom = {
+            inputs: {
+                gender: document.getElementById('gender'),
+                age: document.getElementById('age'),
+                heightFt: document.getElementById('height-ft'),
+                heightIn: document.getElementById('height-in'),
+                heightCm: document.getElementById('height-cm'),
+                weightCurrent: document.getElementById('current-weight'),
+                weightTarget: document.getElementById('target-weight'),
+                caloriesIn: document.getElementById('calories-in'),
+                activityLevel: document.getElementById('activity-level'),
+                customExpenditure: document.getElementById('custom-expenditure'),
+            },
+            btns: {
+                heightToggle: document.getElementById('height-toggle-btn'),
+                weightToggle: document.getElementById('weight-toggle-btn'),
+                chartToggle: document.getElementById('chart-unit-toggle'),
+                chartLabel: document.getElementById('chart-unit-label'),
+                tdeeMode: document.getElementById('tdee-mode-btn')
+            },
+            containers: {
+                heightImperial: document.getElementById('height-imperial-inputs'),
+                heightMetric: document.getElementById('height-metric-inputs'),
+                modeAuto: document.getElementById('mode-auto'),
+                modeManual: document.getElementById('mode-manual'),
+                weightLabels: document.querySelectorAll('.weight-unit-label')
+            },
+            badges: {
+                currentBMI: document.getElementById('bmi-current-badge'),
+                targetBMI: document.getElementById('bmi-target-badge')
+            },
+            stats: {
+                tdee: document.getElementById('stat-tdee'),
+                date: document.getElementById('stat-date'),
+                duration: document.getElementById('stat-duration'),
+                alert: document.getElementById('alert-box'),
+                alertMsg: document.getElementById('alert-msg')
+            }
+        };
+
+        let chartInstance = null;
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            setupEventListeners();
+            applyStateToDOM();
+            updateSimulation();
+        });
+
+        function saveState() {
+            state.inputs.gender = dom.inputs.gender.value;
+            state.inputs.age = dom.inputs.age.value;
+            state.inputs.heightFt = dom.inputs.heightFt.value;
+            state.inputs.heightIn = dom.inputs.heightIn.value;
+            state.inputs.heightCm = dom.inputs.heightCm.value;
+            state.inputs.weightCurrent = dom.inputs.weightCurrent.value;
+            state.inputs.weightTarget = dom.inputs.weightTarget.value;
+            state.inputs.caloriesIn = dom.inputs.caloriesIn.value;
+            state.inputs.activityLevel = dom.inputs.activityLevel.value;
+            state.inputs.customExpenditure = dom.inputs.customExpenditure.value;
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    state = { ...state, ...parsed, inputs: { ...state.inputs, ...parsed.inputs } };
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        function applyStateToDOM() {
+            // Values
+            dom.inputs.gender.value = state.inputs.gender;
+            dom.inputs.age.value = state.inputs.age;
+            dom.inputs.heightFt.value = state.inputs.heightFt;
+            dom.inputs.heightIn.value = state.inputs.heightIn;
+            dom.inputs.heightCm.value = state.inputs.heightCm;
+            dom.inputs.weightCurrent.value = state.inputs.weightCurrent;
+            dom.inputs.weightTarget.value = state.inputs.weightTarget;
+            dom.inputs.caloriesIn.value = state.inputs.caloriesIn;
+            dom.inputs.activityLevel.value = state.inputs.activityLevel;
+            dom.inputs.customExpenditure.value = state.inputs.customExpenditure;
+
+            // UI Logic
+            updateHeightUI();
+            updateWeightUI();
+            updateTDEEModeUI();
+            dom.btns.chartLabel.innerText = state.chartUnit === 'imperial' ? 'LBS' : 'KG';
+        }
+
+        function setupEventListeners() {
+            Object.values(dom.inputs).forEach(el => {
+                if (el) el.addEventListener('input', () => { saveState(); updateSimulation(); });
+            });
+
+            // Integrated Toggles
+            dom.btns.heightToggle.addEventListener('click', () => {
+                state.inputUnits.height = state.inputUnits.height === 'metric' ? 'imperial' : 'metric';
+                // Conversion logic
+                if (state.inputUnits.height === 'imperial') {
+                    const cm = parseFloat(dom.inputs.heightCm.value) || 0;
+                    const totalInches = cm / 2.54;
+                    dom.inputs.heightFt.value = Math.floor(totalInches / 12);
+                    dom.inputs.heightIn.value = Math.round(totalInches % 12);
+                } else {
+                    const ft = parseFloat(dom.inputs.heightFt.value) || 0;
+                    const inc = parseFloat(dom.inputs.heightIn.value) || 0;
+                    dom.inputs.heightCm.value = Math.round(((ft * 12) + inc) * 2.54);
+                }
+                updateHeightUI();
+                saveState();
+                updateSimulation();
+            });
+
+            dom.btns.weightToggle.addEventListener('click', () => {
+                const isNowImperial = state.inputUnits.weight === 'metric'; // switching to imperial?
+                state.inputUnits.weight = isNowImperial ? 'imperial' : 'metric';
+
+                const multiplier = isNowImperial ? 2.20462 : (1 / 2.20462);
+                if (dom.inputs.weightCurrent.value) dom.inputs.weightCurrent.value = Math.round(dom.inputs.weightCurrent.value * multiplier);
+                if (dom.inputs.weightTarget.value) dom.inputs.weightTarget.value = Math.round(dom.inputs.weightTarget.value * multiplier);
+
+                // Sync chart preference usually
+                state.chartUnit = state.inputUnits.weight;
+                dom.btns.chartLabel.innerText = state.chartUnit === 'imperial' ? 'LBS' : 'KG';
+
+                updateWeightUI();
+                saveState();
+                updateSimulation();
+            });
+
+            dom.btns.chartToggle.addEventListener('click', () => {
+                state.chartUnit = state.chartUnit === 'imperial' ? 'metric' : 'imperial';
+                dom.btns.chartLabel.innerText = state.chartUnit === 'imperial' ? 'LBS' : 'KG';
+                saveState();
+                updateSimulation();
+            });
+
+            dom.btns.tdeeMode.addEventListener('click', () => {
+                state.isManualTDEE = !state.isManualTDEE;
+                updateTDEEModeUI();
+                saveState();
+                updateSimulation();
+            });
+        }
+
+        function updateHeightUI() {
+            const isImp = state.inputUnits.height === 'imperial';
+            const indicator = document.getElementById('height-indicator');
+            const lblFt = document.getElementById('lbl-ft');
+            const lblCm = document.getElementById('lbl-cm');
+
+            if (isImp) {
+                indicator.style.transform = 'translateX(0)';
+                lblFt.classList.remove('text-slate-400');
+                lblCm.classList.add('text-slate-400');
+                dom.containers.heightImperial.classList.remove('hidden');
+                dom.containers.heightImperial.classList.add('flex');
+                dom.containers.heightMetric.classList.add('hidden');
+            } else {
+                indicator.style.transform = 'translateX(100%)';
+                lblFt.classList.add('text-slate-400');
+                lblCm.classList.remove('text-slate-400');
+                dom.containers.heightImperial.classList.add('hidden');
+                dom.containers.heightImperial.classList.remove('flex');
+                dom.containers.heightMetric.classList.remove('hidden');
+            }
+        }
+
+        function updateWeightUI() {
+            const isImp = state.inputUnits.weight === 'imperial';
+            const indicator = document.getElementById('weight-indicator');
+            const lblLbs = document.getElementById('lbl-lbs');
+            const lblKg = document.getElementById('lbl-kg');
+
+            if (isImp) {
+                indicator.style.transform = 'translateX(0)';
+                lblLbs.classList.remove('text-slate-400');
+                lblKg.classList.add('text-slate-400');
+                dom.containers.weightLabels.forEach(el => el.innerText = 'lbs');
+            } else {
+                indicator.style.transform = 'translateX(100%)';
+                lblLbs.classList.add('text-slate-400');
+                lblKg.classList.remove('text-slate-400');
+                dom.containers.weightLabels.forEach(el => el.innerText = 'kg');
+            }
+        }
+
+        function updateTDEEModeUI() {
+            const indicator = document.getElementById('mode-indicator');
+            const lblAuto = document.getElementById('lbl-auto');
+            const lblManual = document.getElementById('lbl-manual');
+
+            if (state.isManualTDEE) {
+                indicator.style.transform = 'translateX(100%)';
+                lblAuto.classList.add('text-slate-400');
+                lblManual.classList.remove('text-slate-400');
+                dom.containers.modeAuto.classList.add('hidden');
+                dom.containers.modeManual.classList.remove('hidden');
+            } else {
+                indicator.style.transform = 'translateX(0)';
+                lblAuto.classList.remove('text-slate-400');
+                lblManual.classList.add('text-slate-400');
+                dom.containers.modeAuto.classList.remove('hidden');
+                dom.containers.modeManual.classList.add('hidden');
+            }
+        }
+
+        // --- CALCULATION ---
+        function getNormalizedValues() {
+            let weight = parseFloat(dom.inputs.weightCurrent.value);
+            let target = parseFloat(dom.inputs.weightTarget.value);
+            let height = 0;
+
+            if (state.inputUnits.height === 'imperial') {
+                const ft = parseFloat(dom.inputs.heightFt.value) || 0;
+                const inc = parseFloat(dom.inputs.heightIn.value) || 0;
+                height = ((ft * 12) + inc) * 2.54;
+            } else {
+                height = parseFloat(dom.inputs.heightCm.value) || 0;
+            }
+
+            if (state.inputUnits.weight === 'imperial') {
+                weight = weight / 2.20462;
+                target = target / 2.20462;
+            }
+
+            return { weight, target, height };
+        }
+
+        function calculateBMR(weightKg, heightCm, age, gender) {
+            let bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
+            return gender === 'male' ? bmr + 5 : bmr - 161;
+        }
+
+        function calculateBMI(weightKg, heightCm) {
+            if (!weightKg || !heightCm) return 0;
+            const heightM = heightCm / 100;
+            return (weightKg / (heightM * heightM)).toFixed(1);
+        }
+
+        function updateBMIBadge(element, bmi) {
+            if (bmi > 0 && isFinite(bmi)) {
+                element.innerText = `BMI ${bmi}`;
+                element.classList.remove('hidden');
+                element.classList.remove('bg-teal-50', 'text-teal-700', 'bg-amber-50', 'text-amber-700', 'bg-rose-50', 'text-rose-700', 'dark:bg-teal-900/20', 'dark:text-teal-400', 'dark:bg-amber-900/20', 'dark:text-amber-400', 'dark:bg-rose-900/20', 'dark:text-rose-400');
+
+                if (bmi < 18.5) element.classList.add('bg-amber-50', 'text-amber-700', 'dark:bg-amber-900/20', 'dark:text-amber-400');
+                else if (bmi < 25) element.classList.add('bg-teal-50', 'text-teal-700', 'dark:bg-teal-900/20', 'dark:text-teal-400');
+                else if (bmi < 30) element.classList.add('bg-amber-50', 'text-amber-700', 'dark:bg-amber-900/20', 'dark:text-amber-400');
+                else element.classList.add('bg-rose-50', 'text-rose-700', 'dark:bg-rose-900/20', 'dark:text-rose-400');
+            } else {
+                element.classList.add('hidden');
+            }
+        }
+
+        function updateSimulation() {
+            const { weight: startKg, target: targetKg, height } = getNormalizedValues();
+            const age = parseInt(dom.inputs.age.value) || 30;
+            const gender = dom.inputs.gender.value;
+            const dailyIntake = parseInt(dom.inputs.caloriesIn.value) || 2000;
+
+            updateBMIBadge(dom.badges.currentBMI, calculateBMI(startKg, height));
+            updateBMIBadge(dom.badges.targetBMI, calculateBMI(targetKg, height));
+
+            if (!startKg || !targetKg || !height || !dailyIntake) return;
+
+            let currentKg = startKg;
+            let dayCount = 0;
+            const maxDays = 365 * 5;
+            const dataPoints = [];
+            const losingWeight = targetKg < startKg;
+
+            let startBMR = calculateBMR(startKg, height, age, gender);
+            let startTDEE = state.isManualTDEE ?
+                (parseInt(dom.inputs.customExpenditure.value) || 2000) :
+                (startBMR * parseFloat(dom.inputs.activityLevel.value));
+
+            dom.stats.tdee.innerText = Math.round(startTDEE).toLocaleString();
+
+            let plateauReached = false;
+            let reached = false;
+            const fixedTDEE = state.isManualTDEE ? (parseInt(dom.inputs.customExpenditure.value) || 2000) : null;
+
+            while (true) {
+                if (dayCount % 7 === 0 || dayCount === 0) dataPoints.push({ x: dayCount, y: currentKg });
+
+                if (losingWeight && currentKg <= targetKg) { reached = true; break; }
+                if (!losingWeight && currentKg >= targetKg) { reached = true; break; }
+                if (dayCount >= maxDays) break;
+
+                let dailyTDEE = fixedTDEE || (calculateBMR(currentKg, height, age, gender) * parseFloat(dom.inputs.activityLevel.value));
+                let deficit = dailyTDEE - dailyIntake;
+
+                if (Math.abs(deficit) < 10) { plateauReached = true; break; }
+                currentKg -= (deficit / 7700);
+                dayCount++;
+            }
+
+            dataPoints.push({ x: dayCount, y: currentKg });
+            updateStatsUI(dayCount, maxDays, plateauReached, reached);
+            renderChart(dataPoints, targetKg);
+        }
+
+        function updateStatsUI(days, maxDays, plateau, reached) {
+            dom.stats.alert.classList.add('hidden');
+
+            if (!reached && plateau) {
+                dom.stats.duration.innerText = "Plateau";
+                dom.stats.date.innerText = "Never";
+                dom.stats.alertMsg.innerHTML = "<strong>Metabolic Plateau:</strong> Intake matches burn.";
+                dom.stats.alert.classList.remove('hidden');
+            } else if (!reached && days >= maxDays) {
+                dom.stats.duration.innerText = "> 5 Years";
+                dom.stats.date.innerText = "Future";
+                dom.stats.alertMsg.innerHTML = "<strong>Slow Progress:</strong> Goal too far.";
+                dom.stats.alert.classList.remove('hidden');
+            } else {
+                dom.stats.duration.innerText = days.toLocaleString();
+                const d = new Date();
+                d.setDate(d.getDate() + days);
+                dom.stats.date.innerText = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            }
+        }
+
+        function renderChart(data, targetKg) {
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            const isImp = state.chartUnit === 'imperial';
+            const factor = isImp ? 2.20462 : 1;
+            const unitLabel = isImp ? 'lbs' : 'kg';
+            const chartData = data.map(pt => ({ x: pt.x, y: pt.y * factor }));
+            const displayTarget = targetKg * factor;
+
+            if (chartInstance) chartInstance.destroy();
+
+            // Theme Aware Colors
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? '#1e293b' : '#f1f5f9';
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, isDark ? 'rgba(45, 212, 191, 0.3)' : 'rgba(20, 184, 166, 0.4)');
+            gradient.addColorStop(1, isDark ? 'rgba(45, 212, 191, 0.0)' : 'rgba(20, 184, 166, 0.0)');
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Weight',
+                            data: chartData,
+                            borderColor: '#14b8a6',
+                            backgroundColor: gradient,
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: isDark ? '#0f172a' : '#fff',
+                            pointBorderColor: '#14b8a6',
+                            pointBorderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Target',
+                            data: [{ x: 0, y: displayTarget }, { x: chartData[chartData.length - 1].x, y: displayTarget }],
+                            borderColor: isDark ? '#475569' : '#94a3b8',
+                            borderWidth: 2,
+                            borderDash: [6, 6],
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1e293b' : '#1e293b',
+                            titleColor: '#f8fafc',
+                            bodyColor: '#f8fafc',
+                            padding: 12,
+                            titleFont: { family: 'Inter', size: 13 },
+                            bodyFont: { family: 'Inter', size: 13 },
+                            callbacks: {
+                                label: (ctx) => `Weight: ${ctx.parsed.y.toFixed(1)} ${unitLabel}`,
+                                title: (ctx) => `Day ${ctx[0].parsed.x}`,
+                                afterBody: (tooltipItems) => {
+                                    let weightKg = tooltipItems[0].parsed.y;
+                                    if (state.chartUnit === 'imperial') weightKg = weightKg / 2.20462;
+                                    const { height } = getNormalizedValues();
+                                    return `BMI: ${calculateBMI(weightKg, height)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            grid: { display: false },
+                            ticks: { font: { family: 'Inter' }, color: textColor }
+                        },
+                        y: {
+                            grid: { color: gridColor },
+                            ticks: { font: { family: 'Inter' }, color: textColor },
+                            title: { display: true, text: unitLabel, color: textColor }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
