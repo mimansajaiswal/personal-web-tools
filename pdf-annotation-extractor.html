@@ -383,23 +383,28 @@ annotation
 
     <!-- Lightbox Modal -->
     <div id="lightboxModal"
-        class="hidden fixed inset-0 bg-earth-900/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden">
+        class="hidden fixed inset-0 bg-earth-900/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300"
+        onclick="handleLightboxClick(event)">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden relative"
+            onclick="event.stopPropagation()">
             <!-- Header -->
             <div class="p-4 border-b border-earth-200 flex justify-between items-center bg-earth-50">
                 <h3 class="font-medium text-earth-800" id="lightboxTitle">Page Review</h3>
 
                 <!-- Zoom Controls -->
-                <div class="flex items-center gap-2 bg-earth-100 rounded-lg p-1">
-                    <button onclick="zoomOut()" class="p-1 hover:bg-white rounded text-earth-600" title="Zoom Out">
+                <div class="flex items-center gap-2 bg-earth-100 rounded-lg p-1 select-none">
+                    <button onclick="zoomOut()" class="p-1 hover:bg-white rounded text-earth-600 disabled:opacity-50"
+                        title="Zoom Out">
                         <i data-lucide="minus" class="w-4 h-4"></i>
                     </button>
                     <span id="zoomDisplay" class="text-xs font-mono w-12 text-center">100%</span>
-                    <button onclick="zoomIn()" class="p-1 hover:bg-white rounded text-earth-600" title="Zoom In">
+                    <button onclick="zoomIn()" class="p-1 hover:bg-white rounded text-earth-600 disabled:opacity-50"
+                        title="Zoom In">
                         <i data-lucide="plus" class="w-4 h-4"></i>
                     </button>
                     <div class="w-px h-4 bg-earth-300 mx-1"></div>
-                    <button onclick="resetZoom()" class="p-1 hover:bg-white rounded text-earth-600" title="Reset Zoom">
+                    <button onclick="resetZoom()" class="p-1 hover:bg-white rounded text-earth-600"
+                        title="Fit to Screen">
                         <i data-lucide="maximize" class="w-4 h-4"></i>
                     </button>
                 </div>
@@ -413,9 +418,10 @@ annotation
             <div class="flex-1 flex flex-col overflow-hidden">
                 <!-- Image Area (Top) -->
                 <div class="flex-1 overflow-auto bg-earth-800 relative" id="lightboxScrollArea">
-                    <div class="min-h-full min-w-full flex items-center justify-center p-8">
+                    <!-- Added transition-all for smooth zooming -->
+                    <div class="min-h-full min-w-full flex items-center justify-center p-8" id="imageContainer">
                         <img id="lightboxImage" src=""
-                            class="max-w-full max-h-full shadow-lg rounded transition-transform duration-150 ease-out">
+                            class="max-w-full max-h-full shadow-lg rounded transition-all duration-200 ease-out object-contain">
                     </div>
                 </div>
 
@@ -433,8 +439,7 @@ annotation
 
             <!-- Footer Buttons -->
             <div class="p-4 border-t border-earth-200 bg-white flex justify-end gap-3">
-                <button onclick="closeLightbox()"
-                    class="px-4 py-2 text-earth-600 hover:bg-earth-100 rounded-lg transition-colors">Close</button>
+                <!-- Removed redundant Close button -->
                 <button id="rerunBtn"
                     class="px-4 py-2 bg-amethyst-500 hover:bg-amethyst-600 text-white rounded-lg shadow transition-colors flex items-center gap-2">
                     <i data-lucide="refresh-cw" class="w-4 h-4"></i> Rerun Analysis
@@ -911,7 +916,7 @@ annotation
             currentLightboxIndex = index;
             const slice = sliceState[index];
 
-            // Reset zoom
+            // Reset zoom on open
             resetZoom();
 
             const label = slice.totalParts > 1 ? `Page ${slice.page} - Part ${slice.part}` : `Page ${slice.page}`;
@@ -954,23 +959,27 @@ annotation
             currentLightboxIndex = -1;
         }
 
+        // Handle clicking outside the lightbox content
+        function handleLightboxClick(event) {
+            const modal = document.getElementById('lightboxModal');
+            if (event.target === modal) {
+                closeLightbox();
+            }
+        }
+
         // Zoom Functions
         function updateZoomUI() {
             const img = document.getElementById('lightboxImage');
 
-            // Logic:
-            // If zoom == 1: Use max-w-full max-h-full (Fit Mode)
-            // If zoom > 1: Remove max constraints, set width explicitly to expand
-
+            // If 100% or less, use CSS classes for "Fit"
             if (currentZoom <= 1.0) {
-                img.style.width = 'auto';
-                img.style.height = 'auto';
                 img.classList.add('max-w-full', 'max-h-full');
+                // Reset explicit dimensions so CSS classes take over
+                img.style.width = '';
+                img.style.height = '';
             } else {
+                // If > 100%, remove constraints and set explicit width
                 img.classList.remove('max-w-full', 'max-h-full');
-                // Calculate percent width relative to container, assuming 1.0 fits nicely
-                // Standard "Fit" might be less than 100% if image is vertical. 
-                // Simple approximation: just set width %
                 img.style.width = `${currentZoom * 100}%`;
                 img.style.height = 'auto';
             }
@@ -979,14 +988,14 @@ annotation
         }
 
         function zoomIn() {
-            if (currentZoom < 3.0) {
+            if (currentZoom < 4.0) { // Limit to 400%
                 currentZoom += 0.25;
                 updateZoomUI();
             }
         }
 
         function zoomOut() {
-            if (currentZoom > 0.25) {
+            if (currentZoom > 0.25) { // Limit to 25%
                 currentZoom -= 0.25;
                 updateZoomUI();
             }

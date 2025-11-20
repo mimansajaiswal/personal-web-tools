@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Stack Designer</title>
+
+    <!-- Tailwind CSS for UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- PDF.js for parsing PDF files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom Scrollbar for the settings panel */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Checkerboard pattern for transparent background */
+        .checkerboard {
+            background-image:
+                linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+                linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+                linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+    </style>
+
+    <script>
+        // Configure PDF.js Worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+</head>
+
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden text-slate-800">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm z-10">
+        <div class="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h1 class="text-lg font-semibold tracking-tight">PDF Stack Designer</h1>
+        </div>
+        <div class="flex gap-3">
+            <label for="pdf-upload"
+                class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition shadow-sm flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Upload PDF
+            </label>
+            <input type="file" id="pdf-upload" accept="application/pdf" class="hidden" />
+
+            <button id="download-btn"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md text-sm font-medium transition shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download PNG
+            </button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- Settings Sidebar -->
+        <aside class="w-80 bg-white border-r border-gray-200 overflow-y-auto custom-scroll flex flex-col">
+            <div class="p-5 space-y-6">
+
+                <!-- Status -->
+                <div id="status-area"
+                    class="text-xs font-mono p-3 bg-gray-50 rounded border border-gray-200 text-gray-500">
+                    Waiting for file...
+                </div>
+
+                <div class="space-y-4">
+                    <h3 class="text-xs font-bold uppercase text-gray-400 tracking-wider">Layout</h3>
+
+                    <!-- Direction -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Stack Direction</label>
+                        <select id="direction"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="ltr">Left to Right</option>
+                            <option value="rtl">Right to Left</option>
+                            <option value="ttb">Top to Bottom</option>
+                        </select>
+                    </div>
+
+                    <!-- Page Count -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Page Limit <span id="limit-val"
+                                class="text-gray-400 text-xs ml-1">(5)</span></label>
+                        <input type="range" id="page-limit" min="1" max="20" value="5"
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                    </div>
+
+                    <!-- Spacing (Overlap) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Spread Amount</label>
+                        <input type="range" id="spacing" min="0" max="300" value="100"
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                    </div>
+
+                    <!-- Vertical Offset -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Vertical Step</label>
+                        <input type="range" id="v-step" min="-50" max="50" value="10"
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                    </div>
+                </div>
+
+                <hr class="border-gray-100">
+
+                <div class="space-y-4">
+                    <h3 class="text-xs font-bold uppercase text-gray-400 tracking-wider">Style</h3>
+
+                    <!-- Rotation -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tilt / Rotation</label>
+                        <input type="range" id="rotation" min="-45" max="45" value="-5"
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                    </div>
+
+                    <!-- Randomness -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Messiness (Random Jitter)</label>
+                        <input type="range" id="jitter" min="0" max="20" value="2"
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                    </div>
+
+                    <!-- Shadow -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Shadow Intensity</label>
+                        <input type="range" id="shadow-blur" min="0" max="100" value="40"
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                    </div>
+
+                    <!-- Background -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Background</label>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="transparent-bg" checked
+                                class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300">
+                            <span class="text-sm text-gray-600">Transparent</span>
+                        </div>
+                        <div id="bg-color-wrapper" class="mt-2 hidden">
+                            <input type="color" id="bg-color" value="#ffffff"
+                                class="w-full h-8 cursor-pointer rounded-md border border-gray-300">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- Main Preview Area -->
+        <main class="flex-1 bg-gray-200 checkerboard flex items-center justify-center overflow-auto p-8 relative"
+            id="canvas-container">
+            <div class="text-center text-gray-500" id="placeholder-text">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-gray-400" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 2H7a2 2 0 00-2 2v15a2 2 0 002 2z" />
+                </svg>
+                <p class="text-lg font-medium">Upload a PDF to start designing</p>
+                <p class="text-sm mt-1">Files are processed locally in your browser.</p>
+            </div>
+            <canvas id="main-canvas" class="shadow-2xl hidden max-w-full max-h-full"></canvas>
+        </main>
+    </div>
+
+    <script>
+        // --- State Management ---
+        const state = {
+            pdfDoc: null,
+            pageImages: [], // Array of { canvas, width, height }
+            config: {
+                direction: 'ltr',
+                pageLimit: 5,
+                spacing: 100,
+                vStep: 10,
+                rotation: -5,
+                jitter: 2,
+                shadowBlur: 40,
+                transparentBg: true,
+                bgColor: '#ffffff'
+            }
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            fileInput: document.getElementById('pdf-upload'),
+            canvas: document.getElementById('main-canvas'),
+            downloadBtn: document.getElementById('download-btn'),
+            status: document.getElementById('status-area'),
+            placeholder: document.getElementById('placeholder-text'),
+            container: document.getElementById('canvas-container'),
+
+            // Inputs
+            inputs: {
+                direction: document.getElementById('direction'),
+                pageLimit: document.getElementById('page-limit'),
+                spacing: document.getElementById('spacing'),
+                vStep: document.getElementById('v-step'),
+                rotation: document.getElementById('rotation'),
+                jitter: document.getElementById('jitter'),
+                shadowBlur: document.getElementById('shadow-blur'),
+                transparentBg: document.getElementById('transparent-bg'),
+                bgColor: document.getElementById('bg-color')
+            }
+        };
+
+        // --- Initialization ---
+        function init() {
+            // Attach listeners to all inputs
+            Object.entries(els.inputs).forEach(([key, el]) => {
+                el.addEventListener('input', (e) => {
+                    // Update state
+                    if (el.type === 'checkbox') state.config[key] = el.checked;
+                    else if (key === 'direction' || key === 'bgColor') state.config[key] = el.value;
+                    else state.config[key] = parseInt(el.value);
+
+                    // UI Updates
+                    if (key === 'pageLimit') document.getElementById('limit-val').innerText = `(${el.value})`;
+                    if (key === 'transparentBg') {
+                        document.getElementById('bg-color-wrapper').style.display = el.checked ? 'none' : 'block';
+                    }
+
+                    // Redraw if we have images
+                    if (state.pageImages.length > 0) {
+                        if (key === 'pageLimit') {
+                            // Re-render PDF pages if limit changes
+                            loadPagesFromDoc();
+                        } else {
+                            drawStack();
+                        }
+                    }
+                });
+            });
+
+            els.fileInput.addEventListener('change', handleFileUpload);
+            els.downloadBtn.addEventListener('click', downloadImage);
+
+            // Window resize listener to adjust canvas display (not content)
+            window.addEventListener('resize', () => {
+                if (state.pageImages.length > 0) drawStack();
+            });
+        }
+
+        // --- File Handling ---
+        async function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                alert('Please upload a valid PDF file.');
+                return;
+            }
+
+            els.status.textContent = "Loading PDF...";
+            els.placeholder.style.display = 'none';
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                state.pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+                els.status.textContent = `PDF Loaded (${state.pdfDoc.numPages} pages). Rendering...`;
+                await loadPagesFromDoc();
+
+                els.downloadBtn.disabled = false;
+                els.canvas.classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+                els.status.textContent = "Error: " + err.message;
+                alert("Error loading PDF. Ensure it is not password protected.");
+            }
+        }
+
+        // --- PDF Rendering (To Offscreen Canvas) ---
+        async function loadPagesFromDoc() {
+            if (!state.pdfDoc) return;
+
+            state.pageImages = [];
+            const count = Math.min(state.pdfDoc.numPages, state.config.pageLimit);
+            const scale = 1.5; // High quality for output
+
+            els.status.textContent = `Rendering ${count} pages...`;
+
+            for (let i = 1; i <= count; i++) {
+                const page = await state.pdfDoc.getPage(i);
+                const viewport = page.getViewport({ scale: scale });
+
+                // Create offscreen canvas
+                const offCanvas = document.createElement('canvas');
+                offCanvas.width = viewport.width;
+                offCanvas.height = viewport.height;
+                const ctx = offCanvas.getContext('2d');
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                await page.render(renderContext).promise;
+
+                state.pageImages.push({
+                    canvas: offCanvas,
+                    width: viewport.width,
+                    height: viewport.height,
+                    // Pre-calculate random jitter for this page so it stays consistent
+                    jitterX: (Math.random() - 0.5) * 2,
+                    jitterY: (Math.random() - 0.5) * 2,
+                    jitterRot: (Math.random() - 0.5) * 2
+                });
+            }
+
+            els.status.textContent = "Rendering complete.";
+            drawStack();
+        }
+
+        // --- Core Stack Algorithm ---
+        function drawStack() {
+            if (state.pageImages.length === 0) return;
+
+            const ctx = els.canvas.getContext('2d');
+            const config = state.config;
+            const images = state.pageImages;
+
+            // 1. Calculate Canvas Bounds
+            // We need to simulate the draw first to find the total width/height needed.
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+            // Standard page size (using first page as reference)
+            const refW = images[0].width;
+            const refH = images[0].height;
+
+            // Loop to determine bounding box
+            images.forEach((img, index) => {
+                // Position Logic
+                let x = 0, y = 0;
+                const offset = index * config.spacing;
+                const vOffset = index * config.vStep;
+
+                if (config.direction === 'ltr') x = offset;
+                else if (config.direction === 'rtl') x = -offset;
+                else if (config.direction === 'ttb') { y = offset; x = 0; } // vertical stack
+
+                // Add jitter
+                x += img.jitterX * config.jitter;
+                y += img.jitterY * config.jitter;
+                y += vOffset; // add configured vertical step
+
+                // Rotation impacts bounding box. Approximate with a safety margin or use trig
+                // Using simple box expansion for simplicity + padding
+                const pad = config.shadowBlur + 50; // Padding for shadow and rotation
+
+                minX = Math.min(minX, x - pad);
+                maxX = Math.max(maxX, x + refW + pad);
+                minY = Math.min(minY, y - pad);
+                maxY = Math.max(maxY, y + refH + pad);
+            });
+
+            // 2. Resize Canvas
+            els.canvas.width = maxX - minX;
+            els.canvas.height = maxY - minY;
+
+            // 3. Background
+            if (!config.transparentBg) {
+                ctx.fillStyle = config.bgColor;
+                ctx.fillRect(0, 0, els.canvas.width, els.canvas.height);
+            } else {
+                ctx.clearRect(0, 0, els.canvas.width, els.canvas.height);
+            }
+
+            // 4. Draw Images
+            // IMPORTANT: We need to decide draw order (Z-index).
+            // "First page full" implies the top page is index 0.
+            // In a physical stack, if Page 1 is on top, we must draw Page N (bottom) first, then N-1, etc.
+
+            // Create a copy to sort/reverse for drawing
+            const drawOrder = images.map((img, i) => ({ ...img, originalIndex: i })).reverse();
+
+            drawOrder.forEach((img) => {
+                const index = img.originalIndex;
+
+                ctx.save();
+
+                // Translation
+                let x = 0, y = 0;
+                const offset = index * config.spacing;
+                const vOffset = index * config.vStep;
+
+                if (config.direction === 'ltr') x = offset;
+                else if (config.direction === 'rtl') x = -offset;
+                else if (config.direction === 'ttb') { y = offset; x = 0; }
+
+                // Adjust coordinate system to center the stack in the canvas
+                // The bounding box starts at minX, minY. We subtract that to map to 0,0
+                const drawX = x - minX + (img.jitterX * config.jitter);
+                const drawY = y - minY + vOffset + (img.jitterY * config.jitter);
+
+                // Move to center of where the page should be to rotate
+                const centerX = drawX + img.width / 2;
+                const centerY = drawY + img.height / 2;
+
+                ctx.translate(centerX, centerY);
+
+                // Rotate
+                const baseRot = config.rotation * (Math.PI / 180);
+                const jitRot = (img.jitterRot * config.jitter) * (Math.PI / 180); // Jitter rotation is subtle
+                ctx.rotate(baseRot + jitRot);
+
+                // Shadow
+                ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+                ctx.shadowBlur = config.shadowBlur;
+                ctx.shadowOffsetX = 10;
+                ctx.shadowOffsetY = 10;
+
+                // Draw Image (offset by half width/height because we translated to center)
+                ctx.drawImage(img.canvas, -img.width / 2, -img.height / 2);
+
+                // Optional: Add a subtle white border/stroke to define edges if pages are white
+                ctx.shadowColor = "transparent"; // Clear shadow for stroke
+                ctx.strokeStyle = "rgba(0,0,0,0.1)";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(-img.width / 2, -img.height / 2, img.width, img.height);
+
+                ctx.restore();
+            });
+        }
+
+        // --- Download ---
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = 'pdf-stack.png';
+            link.href = els.canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+
+</html>
