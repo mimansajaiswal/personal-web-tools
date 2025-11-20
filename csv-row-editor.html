@@ -10,16 +10,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --earth-bg: #f8f5ef;
+            --earth-bg: #fdfaf7;
             --earth-surface: #ffffff;
-            --earth-panel: #f4efe7;
+            --earth-panel: #f5efe8;
             --earth-border: #e1dbd3;
-            --earth-text: #1f1c18;
+            --earth-text: #2d2a27;
             --earth-muted: #6b625a;
-            --earth-accent: #b47a3c;
-            --earth-accent-dark: #8f5f2a;
-            --earth-soft: #f0ebe3;
-            --earth-sage: #4f4d48;
+            --earth-accent: #6a5a7d;
+            --earth-accent-dark: #4f4160;
+            --earth-soft: #f3eff7;
+            --earth-sage: #4f463e;
         }
 
         body {
@@ -76,8 +76,8 @@
         .tag-pill {
             display: inline-flex;
             align-items: center;
-            background-color: #efe5d4;
-            color: #704422;
+            background-color: #f3eff7;
+            color: #6a5a7d;
             padding: 2px 8px;
             border-radius: 9999px;
             font-size: 0.75rem;
@@ -114,7 +114,7 @@
                 </svg>
             </div>
             <div>
-                <h1 class="text-xl font-bold tracking-tight text-[#1f1c18]">CSV Studio</h1>
+                <h1 class="text-xl font-bold tracking-tight text-[#2d2a27]">CSV Studio</h1>
                 <p class="text-xs text-[#6b625a]">Advanced Editor</p>
             </div>
         </div>
@@ -153,7 +153,7 @@
             class="absolute inset-0 z-20 bg-[#f5f0e7]/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8">
             <div class="bg-[var(--earth-surface)] p-8 rounded-2xl border border-[var(--earth-border)] max-w-md w-full">
                 <div
-                    class="bg-[#f5ecde] text-[var(--earth-accent)] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    class="bg-[#f1eafd] text-[var(--earth-accent)] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -163,7 +163,7 @@
                         <path d="M10 9H8"></path>
                     </svg>
                 </div>
-                <h2 class="text-2xl font-bold text-[#1f1c18] mb-2">No File Loaded</h2>
+                <h2 class="text-2xl font-bold text-[#2d2a27] mb-2">No File Loaded</h2>
                 <p class="text-[#6b625a] mb-6">Upload a CSV to start editing. <br>Supports String, Number, Select &
                     Multi-select fields.</p>
                 <button onclick="document.getElementById('fileInput').click()"
@@ -183,9 +183,9 @@
             </div>
             <div class="p-3 border-t border-[var(--earth-border)] bg-[var(--earth-panel)] flex gap-2 justify-between">
                 <button id="selectAllCols"
-                    class="text-xs font-medium text-[var(--earth-accent)] hover:bg-[#f4ede4] px-3 py-2 rounded transition flex-1 border border-transparent">All</button>
+                    class="text-xs font-medium text-[var(--earth-accent)] hover:bg-[#efe5fb] px-3 py-2 rounded transition flex-1 border border-transparent">All</button>
                 <button id="deselectAllCols"
-                    class="text-xs font-medium text-[#6b625a] hover:bg-[#f4ede4] px-3 py-2 rounded transition flex-1 border border-transparent">None</button>
+                    class="text-xs font-medium text-[#6b625a] hover:bg-[#efe5fb] px-3 py-2 rounded transition flex-1 border border-transparent">None</button>
             </div>
         </aside>
 
@@ -196,7 +196,7 @@
             <div class="flex items-center justify-between p-4 lg:px-8 lg:py-4 bg-[var(--earth-surface)] border-b border-[var(--earth-border)]">
                 <div class="flex flex-col">
                     <span class="text-xs font-bold text-[#6b625a] uppercase tracking-wider">Row</span>
-                    <span class="text-2xl font-bold text-[#1f1c18] font-mono" id="rowCounter">#1</span>
+                    <span class="text-2xl font-bold text-[#2d2a27] font-mono" id="rowCounter">#1</span>
                 </div>
 
                 <div class="flex items-center bg-[var(--earth-soft)] p-1 rounded-lg border border-[var(--earth-border)]">
@@ -245,16 +245,16 @@
 
     <!-- Toast -->
     <div id="toast"
-        class="fixed bottom-5 right-5 bg-[#1f1c18] text-white px-4 py-3 rounded-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
+        class="fixed bottom-5 right-5 bg-[#2d2a27] text-white px-4 py-3 rounded-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
         <span id="toastMsg">Notification</span>
     </div>
 
     <!-- Custom Input Modal -->
     <div id="customModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-[#2d2015]/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        class="fixed inset-0 z-50 flex items-center justify-center bg-[#1e1824]/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
         <div class="bg-[var(--earth-surface)] rounded-xl p-6 w-full max-w-sm transform scale-95 transition-all duration-200 border border-[var(--earth-border)]"
             id="modalPanel">
-            <h3 id="modalTitle" class="text-lg font-bold text-[#1f1c18] mb-2">Input Required</h3>
+            <h3 id="modalTitle" class="text-lg font-bold text-[#2d2a27] mb-2">Input Required</h3>
             <input type="text" id="modalInput"
                 class="w-full border border-[var(--earth-border)] rounded-lg px-3 py-2 mb-4 focus:ring-2 focus:ring-[var(--earth-accent)] focus:border-[var(--earth-accent)] outline-none"
                 placeholder="Enter value...">
@@ -591,7 +591,7 @@
                     // Add Create New Option
                     const createOpt = document.createElement('option');
                     createOpt.value = "__NEW__";
-                    createOpt.className = "font-bold text-[var(--earth-accent)] bg-[#f4ede4]";
+                    createOpt.className = "font-bold text-[var(--earth-accent)] bg-[#efe5fb]";
                     createOpt.text = "+ Create New Option...";
                     inputEl.appendChild(createOpt);
 
@@ -691,7 +691,7 @@
             // Add Create New Option
             const createOpt = document.createElement('option');
             createOpt.value = "__NEW__";
-            createOpt.className = "font-bold text-[var(--earth-accent)] bg-[#f4ede4]";
+            createOpt.className = "font-bold text-[var(--earth-accent)] bg-[#efe5fb]";
             createOpt.text = "+ Create New Tag...";
             addSelect.appendChild(createOpt);
 

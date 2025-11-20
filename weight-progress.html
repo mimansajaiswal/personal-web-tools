@@ -23,9 +23,29 @@
                     },
                     colors: {
                         slate: {
-                            850: '#172033',
-                            900: '#0f172a',
-                            950: '#020617',
+                            50: '#fdfaf7',
+                            100: '#f3ede4',
+                            200: '#e5dcd0',
+                            300: '#d6cbc0',
+                            400: '#b9ac9f',
+                            500: '#958c81',
+                            600: '#746c62',
+                            700: '#564f48',
+                            800: '#3c3631',
+                            900: '#2d2a27',
+                            950: '#1a1815',
+                        },
+                        teal: {
+                            50: '#f6f1fa',
+                            100: '#eae0f1',
+                            200: '#d6c8e1',
+                            300: '#b8aac7',
+                            400: '#9084a6',
+                            500: '#6a5a7d',
+                            600: '#564764',
+                            700: '#443551',
+                            800: '#31263a',
+                            900: '#221927',
                         }
                     }
                 }
@@ -56,12 +76,12 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
+            background: #dcd4c8;
             border-radius: 3px;
         }
 
         .dark ::-webkit-scrollbar-thumb {
-            background: #475569;
+            background: #4a423b;
         }
 
         /* New Input Surface Style */
@@ -166,7 +186,7 @@
                         <!-- Age -->
                         <div
                             class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex items-center shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-colors group">
-                            <div class="w-2.5 h-2.5 rounded-full bg-indigo-400 ml-1 mr-3 shadow-sm"></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-teal-400 ml-1 mr-3 shadow-sm"></div>
                             <div>
                                 <span class="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Age</span>
                                 <div class="flex items-baseline gap-1">
@@ -198,7 +218,7 @@
 
                         <div
                             class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex items-center shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-colors group">
-                            <div class="w-2.5 h-2.5 rounded-full bg-blue-400 ml-1 mr-3 shadow-sm shrink-0"></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-teal-400 ml-1 mr-3 shadow-sm shrink-0"></div>
                             <div class="w-full">
                                 <span class="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Height</span>
 
@@ -409,7 +429,7 @@
                                 id="stat-date">--</span>
                         </div>
                         <i
-                            class="ph-duotone ph-calendar-check absolute right-3 bottom-3 text-4xl text-indigo-500/10 group-hover:text-indigo-500/20 transition-colors"></i>
+                            class="ph-duotone ph-calendar-check absolute right-3 bottom-3 text-4xl text-teal-500/10 group-hover:text-teal-500/20 transition-colors"></i>
                     </div>
 
                     <!-- Duration -->
@@ -870,12 +890,12 @@
 
             // Theme Aware Colors
             const isDark = document.documentElement.classList.contains('dark');
-            const gridColor = isDark ? '#1e293b' : '#f1f5f9';
-            const textColor = isDark ? '#94a3b8' : '#64748b';
+            const gridColor = isDark ? '#26221d' : '#f3ede4';
+            const textColor = isDark ? '#c7bfb4' : '#6b625a';
 
             const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, isDark ? 'rgba(45, 212, 191, 0.3)' : 'rgba(20, 184, 166, 0.4)');
-            gradient.addColorStop(1, isDark ? 'rgba(45, 212, 191, 0.0)' : 'rgba(20, 184, 166, 0.0)');
+            gradient.addColorStop(0, isDark ? 'rgba(160, 140, 183, 0.25)' : 'rgba(106, 90, 125, 0.35)');
+            gradient.addColorStop(1, isDark ? 'rgba(160, 140, 183, 0.00)' : 'rgba(106, 90, 125, 0.00)');
 
             chartInstance = new Chart(ctx, {
                 type: 'line',
@@ -884,13 +904,13 @@
                         {
                             label: 'Weight',
                             data: chartData,
-                            borderColor: '#14b8a6',
+                            borderColor: '#6a5a7d',
                             backgroundColor: gradient,
                             borderWidth: 3,
                             pointRadius: 0,
                             pointHoverRadius: 6,
-                            pointBackgroundColor: isDark ? '#0f172a' : '#fff',
-                            pointBorderColor: '#14b8a6',
+                            pointBackgroundColor: isDark ? '#12100d' : '#fff',
+                            pointBorderColor: '#6a5a7d',
                             pointBorderWidth: 2,
                             fill: true,
                             tension: 0.4
@@ -898,7 +918,7 @@
                         {
                             label: 'Target',
                             data: [{ x: 0, y: displayTarget }, { x: chartData[chartData.length - 1].x, y: displayTarget }],
-                            borderColor: isDark ? '#475569' : '#94a3b8',
+                            borderColor: isDark ? '#3a342f' : '#c7bfb4',
                             borderWidth: 2,
                             borderDash: [6, 6],
                             pointRadius: 0,
@@ -913,9 +933,9 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: isDark ? '#1e293b' : '#1e293b',
-                            titleColor: '#f8fafc',
-                            bodyColor: '#f8fafc',
+                            backgroundColor: isDark ? '#26221d' : '#3a352f',
+                            titleColor: '#fdfbf6',
+                            bodyColor: '#fdfbf6',
                             padding: 12,
                             titleFont: { family: 'Inter', size: 13 },
                             bodyFont: { family: 'Inter', size: 13 },
