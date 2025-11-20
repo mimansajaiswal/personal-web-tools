@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tools - Mimansa Jaiswal</title>
+
+    <!-- Google Fonts: Figtree and Spline Sans Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Spline+Sans+Mono:wght@300..700&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Configuration to match your Theme JSON -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Figtree', 'sans-serif'],
+                        mono: ['Spline Sans Mono', 'monospace'],
+                    },
+                    colors: {
+                        bgColor: 'rgb(var(--bg-color) / <alpha-value>)',
+                        textColor: 'rgb(var(--text-color) / <alpha-value>)',
+                        accent: 'rgb(var(--accent-color) / <alpha-value>)',
+                        'accent-2': 'rgb(var(--accent-2-color) / <alpha-value>)',
+                        quote: 'rgb(var(--quote-color) / <alpha-value>)',
+                        'accent-400': 'rgb(var(--accent-color) / 0.8)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-color: 253 250 247;
+            --text-color: 45 42 39;
+            --link-color: 60 75 95;
+            --accent-color: 95 50 140;
+            --accent-2-color: 80 70 60;
+            --quote-color: 180 50 60;
+        }
+
+        .dark {
+            --bg-color: 28 25 23;
+            --text-color: 245 242 238;
+            --link-color: 140 165 185;
+            --accent-color: 220 210 240;
+            --accent-2-color: 210 200 190;
+            --quote-color: 200 220 180;
+        }
+
+        body {
+            background-color: rgb(var(--bg-color));
+            color: rgb(var(--text-color));
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .tool-link {
+            color: rgb(var(--link-color));
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+        }
+
+        .tool-link:hover {
+            color: rgb(var(--accent-color));
+            border-bottom-color: rgb(var(--accent-color));
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgb(var(--accent-2-color) / 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: rgb(var(--accent-color) / 0.6);
+        }
+    </style>
+</head>
+
+<body class="flex flex-col min-h-screen px-4 sm:px-8 py-4 font-sans">
+
+    <!-- HEADER -->
+    <div class="max-w-6xl mx-auto w-full">
+        <header id="main-header"
+            class="group relative mb-12 flex w-full items-center justify-between sm:ps-[4.5rem] pt-4">
+            <div class="flex sm:flex-col">
+                <a href="https://mimansajaiswal.github.io/"
+                    class="inline-flex items-center grayscale hover:filter-none sm:relative sm:inline-block"
+                    aria-current="page">
+                    <img src="./mj_header.webp"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"
+                        alt="Site header image"
+                        class="me-3 h-10 w-10 object-contain sm:absolute sm:start-[-4.5rem] sm:me-0 sm:h-15 sm:w-15">
+                    <div
+                        class="hidden me-3 h-10 w-10 sm:absolute sm:start-[-4.5rem] sm:me-0 sm:h-15 sm:w-15 items-center justify-center rounded-full bg-accent/10 text-accent font-bold border border-accent/20">
+                        MJ</div>
+                    <span class="text-xl font-bold sm:text-2xl text-textColor">Mimansa Jaiswal</span>
+                </a>
+                <nav id="navigation-menu"
+                    class="md bg-bgColor/90 text-accent absolute -inset-x-4 top-14 hidden flex-col items-end rounded-md py-2 text-base shadow-sm backdrop-blur-sm group-[.menu-open]:z-50 group-[.menu-open]:flex sm:static sm:z-auto sm:-ms-4 sm:mt-1 sm:flex sm:flex-row sm:items-center sm:rounded-none sm:py-0 sm:text-sm sm:shadow-none sm:backdrop-blur-none lg:text-base print:hidden"
+                    aria-label="Main menu">
+                    <a href="https://mimansajaiswal.github.io/"
+                        class="sm:hover:decoration-accent-2/40 w-full px-4 py-4 text-right underline-offset-4 sm:w-auto sm:py-0 sm:text-left sm:hover:underline sm:hover:decoration-wavy">
+                        Home </a>
+                    <a href="https://mimansajaiswal.github.io/papers"
+                        class="sm:hover:decoration-accent-2/40 w-full px-4 py-4 text-right underline-offset-4 sm:w-auto sm:py-0 sm:text-left sm:hover:underline sm:hover:decoration-wavy">
+                        Publications </a>
+                    <a href="https://mimansajaiswal.github.io/collections/research"
+                        class="sm:hover:decoration-accent-2/40 w-full px-4 py-4 text-right underline-offset-4 sm:w-auto sm:py-0 sm:text-left sm:hover:underline sm:hover:decoration-wavy">
+                        Research </a>
+                    <a href="https://mimansajaiswal.github.io/collections/fieldnotes"
+                        class="sm:hover:decoration-accent-2/40 w-full px-4 py-4 text-right underline-offset-4 sm:w-auto sm:py-0 sm:text-left sm:hover:underline sm:hover:decoration-wavy">
+                        Fieldnotes </a>
+                    <a href="https://mimansajaiswal.github.io/collections/personal"
+                        class="sm:hover:decoration-accent-2/40 w-full px-4 py-4 text-right underline-offset-4 sm:w-auto sm:py-0 sm:text-left sm:hover:underline sm:hover:decoration-wavy">
+                        Personal </a>
+                    <a href="https://mimansajaiswal.github.io/collections/blurbs"
+                        class="sm:hover:decoration-accent-2/40 w-full px-4 py-4 text-right underline-offset-4 sm:w-auto sm:py-0 sm:text-left sm:hover:underline sm:hover:decoration-wavy">
+                        Blurbs </a>
+                    <span
+                        class="sm:hover:decoration-accent-2/40 w-full px-4 py-4 text-right underline-offset-4 sm:w-auto sm:py-0 sm:text-left font-bold decoration-wavy underline decoration-accent-2/40 cursor-default">
+                        Tools </span>
+                </nav>
+            </div>
+            <div class="flex flex-row print:hidden items-center">
+                <theme-toggle class="ml-auto order-0 sm:order-3">
+                    <button type="button" id="themeToggle"
+                        class="group hover:text-accent hover:ring-accent-400 relative h-10 w-10 cursor-pointer rounded-md p-2 transition-all hover:ring-2 text-textColor"
+                        aria-label="Toggle Theme">
+                        <svg class="absolute top-1/2 left-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 scale-0 opacity-0 transition-all group-data-[theme=system]:scale-100 group-data-[theme=system]:opacity-100"
+                            id="system-svg" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                            viewBox="0 0 24 24">
+                            <path
+                                d="M 9.173 14.83 a 4 4 0 1 1 5.657 -5.657 m -2.83 2.827 a 7.5 7.5 0 0 0 8.845 2.492 A 9 9 0 0 1 5.642 18.36 M 3 12 h 1 m 8 -9 v 1 M 5.6 5.6 l 0.7 0.7 M 3 21 L 21 3"
+                                fill="none"></path>
+                        </svg>
+                        <svg class="absolute top-1/2 left-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 scale-0 opacity-0 transition-all group-data-[theme=light]:scale-100 group-data-[theme=light]:opacity-100"
+                            id="sun-svg" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                            viewBox="0 0 24 24">
+                            <path
+                                d="M12 18a6 6 0 1 0 0-12a6 6 0 0 0 0 12m10-6h1M12 2V1m0 22v-1m8-2l-1-1m1-15l-1 1M4 20l1-1M4 4l1 1m-4 7h1"
+                                fill="none"></path>
+                        </svg>
+                        <svg class="absolute top-1/2 left-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 scale-0 opacity-0 transition-all group-data-[theme=dark]:scale-100 group-data-[theme=dark]:opacity-100"
+                            id="moon-svg" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                            viewBox="0 0 24 24">
+                            <path
+                                d="M3 11.507a9.493 9.493 0 0 0 18 4.219c-8.507 0-12.726-4.22-12.726-12.726A9.49 9.49 0 0 0 3 11.507"
+                                fill="none"></path>
+                        </svg>
+                    </button>
+                </theme-toggle>
+                <mobile-button class="flex items-center">
+                    <button id="toggle-navigation-menu"
+                        class="group relative ms-4 h-7 w-7 cursor-pointer sm:invisible sm:hidden text-textColor hover:text-accent"
+                        type="button" aria-label="Open main menu" aria-expanded="false">
+                        <svg class="absolute start-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 transition-all group-aria-expanded:scale-0 group-aria-expanded:opacity-0"
+                            aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                            <path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3" fill="currentColor"></path>
+                        </svg>
+                        <svg class="text-accent absolute start-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 scale-0 opacity-0 transition-all group-aria-expanded:scale-100 group-aria-expanded:opacity-100"
+                            aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                            <path
+                                d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12z"
+                                fill="currentColor"></path>
+                        </svg>
+                    </button>
+                </mobile-button>
+            </div>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="max-w-4xl mx-auto w-full flex-grow">
+
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold mb-4 text-textColor">Web Tools</h1>
+            <p class="mb-6 text-lg text-textColor opacity-90">
+                Miscellaneous HTML+JavaScript tools built mostly with the help of LLMs.
+                Hosted directly on GitHub Pages.
+            </p>
+
+            <!-- Search Input -->
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <svg class="w-5 h-5 text-accent" aria-hidden="true" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <input type="text" id="tool-search"
+                    class="block w-full p-4 pl-10 text-sm bg-transparent border-2 border-accent-2/30 rounded-lg focus:ring-accent focus:border-accent text-textColor placeholder-textColor/60 outline-none transition-colors"
+                    placeholder="Search tools... (Press Cmd+K or '/' to focus)">
+            </div>
+        </div>
+
+        <!-- Tools Container (Populated by JS) -->
+        <!-- Using columns to create masonry-like flow -->
+        <div id="tools-container" class="columns-1 md:columns-2 gap-12 space-y-12">
+            <!-- Content will be injected here by renderTools() -->
+        </div>
+
+        <!-- No Results Message -->
+        <div id="no-results" class="hidden text-center py-12">
+            <p class="text-xl text-textColor/60">No tools found matching "<span id="search-term"
+                    class="font-bold"></span>"</p>
+        </div>
+
+    </main>
+
+    <footer class="mt-12 py-8 border-t border-accent-2/10 text-center text-sm text-textColor/60">
+        <p>&copy;
+            <script>document.write(new Date().getFullYear())</script> Mimansa Jaiswal. All rights reserved.
+        </p>
+        <p class="mt-2">The code lives in <a href="https://github.com/mimansajaiswal/tools"
+                class="underline hover:text-accent">tools</a>.</p>
+    </footer>
+
+    <!-- ========================================== -->
+    <!-- SCRIPTS & DATA CONFIGURATION -->
+    <!-- ========================================== -->
+    <script>
+        /**
+         * ------------------------------------------------------------------
+         * TOOLS CONFIGURATION
+         * ------------------------------------------------------------------
+         * To add a new tool, simply add an object to this array.
+         * Fields:
+         * - section: The header title grouping the tool. New sections create new headers automatically.
+         * - name: Display name of the tool
+         * - url: Relative path to the tool (e.g., "./my-tool/")
+         * - desc: Short description displayed next to the name
+         * - made_by: (Optional) Creator name to display as a badge (e.g., "Mimansa", "Claude")
+         */
+        const toolsData = [
+            // --- TAW Tools ---
+            { section: "📺 The Attention Window", name: "OBS Overlay", url: "./taw/pickerwheel.html", desc: "rou-lit review picker wheel", made_by: "Gemini 3" },
+            // --- Dev Utilities ---
+            // { section: "Dev Utilities", name: "UUID Gen", url: "./uuid/", desc: "generate unique IDs", made_by: "GPT-4" },
+            // { section: "Dev Utilities", name: "JSON Diff", url: "./json-diff/", desc: "compare JSON objects" },
+
+            // --- Image and Media ---
+            // { section: "Image and Media", name: "Color Picker", url: "./color/", desc: "extract colors from images" },
+        ];
+
+        // --- RENDER LOGIC ---
+        function renderTools() {
+            const container = document.getElementById('tools-container');
+            container.innerHTML = '';
+
+            // Group tools by section
+            const groups = toolsData.reduce((acc, tool) => {
+                if (!acc[tool.section]) acc[tool.section] = [];
+                acc[tool.section].push(tool);
+                return acc;
+            }, {});
+
+            // Get unique sections to preserve order or alphabetical - here using order of appearance
+            const uniqueSections = [...new Set(toolsData.map(t => t.section))];
+
+            uniqueSections.forEach(sectionTitle => {
+                const tools = groups[sectionTitle];
+
+                // Create Section Container
+                const sectionEl = document.createElement('section');
+                sectionEl.className = "mb-10 break-inside-avoid";
+
+                // Generic Header Generation (No hardcoded TAW checks)
+                const headerHtml = `
+                    <h2 class="text-2xl font-bold mb-4 border-b-2 border-accent-2/20 pb-2 text-textColor flex items-center gap-2">
+                        ${sectionTitle}
+                    </h2>
+                `;
+
+                // List Logic
+                const listItems = tools.map(tool => {
+                    // Badge Logic
+                    const badgeHtml = tool.made_by
+                        ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent/10 text-accent border border-accent/20 uppercase tracking-wider transform translate-y-[-1px]">${tool.made_by}</span>`
+                        : '';
+
+                    return `
+                    <li class="tool-item mb-2">
+                        <div class="inline-flex flex-wrap items-baseline gap-x-2">
+                            <a href="${tool.url}" class="tool-link font-medium text-lg">${tool.name}</a> 
+                            ${badgeHtml}
+                            <span class="text-sm opacity-70">- ${tool.desc}</span>
+                        </div>
+                    </li>
+                `}).join('');
+
+                sectionEl.innerHTML = `
+                    ${headerHtml}
+                    <ul class="pl-2 text-textColor/90">
+                        ${listItems}
+                    </ul>
+                `;
+
+                container.appendChild(sectionEl);
+            });
+        }
+
+        // Initial Render
+        renderTools();
+
+        // --- 1. THEME LOGIC ---
+        const getThemePreference = () => {
+            if (typeof localStorage !== "undefined" && localStorage.getItem("theme")) {
+                return localStorage.getItem("theme");
+            }
+            return "system";
+        };
+
+        const updateTheme = () => {
+            const theme = getThemePreference();
+            const toggleButton = document.getElementById("themeToggle");
+
+            if (theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+                document.documentElement.classList.add("dark");
+            } else {
+                document.documentElement.classList.remove("dark");
+            }
+
+            if (toggleButton) toggleButton.setAttribute("data-theme", theme);
+        };
+
+        updateTheme();
+
+        const handleToggleClick = () => {
+            const theme = getThemePreference();
+            let newTheme = "system";
+            if (theme === "system") newTheme = "light";
+            else if (theme === "light") newTheme = "dark";
+            else if (theme === "dark") newTheme = "system";
+
+            localStorage.setItem("theme", newTheme);
+            updateTheme();
+        };
+
+        document.getElementById("themeToggle").addEventListener("click", handleToggleClick);
+
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+            if (getThemePreference() === "system") updateTheme();
+        });
+
+        // --- 2. MOBILE MENU LOGIC ---
+        const menuBtn = document.getElementById('toggle-navigation-menu');
+        const header = document.getElementById('main-header');
+
+        menuBtn.addEventListener('click', () => {
+            const isExpanded = menuBtn.getAttribute('aria-expanded') === 'true';
+            menuBtn.setAttribute('aria-expanded', !isExpanded);
+
+            if (!isExpanded) {
+                header.classList.add('menu-open');
+            } else {
+                header.classList.remove('menu-open');
+            }
+        });
+
+        // --- 3. SEARCH FILTER LOGIC ---
+        const searchInput = document.getElementById('tool-search');
+        const noResults = document.getElementById('no-results');
+        const searchTermSpan = document.getElementById('search-term');
+        const toolsContainer = document.getElementById('tools-container');
+
+        document.addEventListener('keydown', (e) => {
+            // Support Cmd+K (Mac) / Ctrl+K (Windows) and '/'
+            if (((e.metaKey || e.ctrlKey) && e.key === 'k') || (e.key === '/' && document.activeElement !== searchInput)) {
+                e.preventDefault();
+                searchInput.focus();
+            }
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            let visibleCount = 0;
+
+            // Re-query items since they are dynamic
+            const toolItems = document.querySelectorAll('.tool-item');
+
+            toolItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(term)) {
+                    item.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            // Hide empty sections
+            document.querySelectorAll('section').forEach(section => {
+                const visibleChildren = section.querySelectorAll('.tool-item:not(.hidden)');
+                if (visibleChildren.length === 0) {
+                    section.classList.add('hidden');
+                } else {
+                    section.classList.remove('hidden');
+                }
+            });
+
+            if (visibleCount === 0) {
+                noResults.classList.remove('hidden');
+                searchTermSpan.textContent = term;
+                toolsContainer.classList.add('hidden');
+            } else {
+                noResults.classList.add('hidden');
+                toolsContainer.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+
+</html>
