@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Image Creator</title>
+
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        linen: '#FDFAF7',
+                        'linen-dark': '#EAE5E0',
+                        earth: '#2D2A27',
+                        charcoal: '#1C1917',
+                        'dull-purple': '#5F328C',
+                        'dull-purple-light': '#DCD2F0',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Prism.js for Syntax Highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Inter:wght@300;400;600&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFAF7;
+            color: #2D2A27;
+        }
+
+        /* Removed Checkerboard, now solid color */
+        .checkerboard {
+            background-color: #FDFAF7;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #FDFAF7;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #DCD2F0;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5F328C;
+        }
+
+        /* Prism Override for transparent background to fit container */
+        pre[class*="language-"] {
+            margin: 0 !important;
+            padding: 1.5rem !important;
+            background: transparent !important;
+            text-shadow: none !important;
+        }
+
+        .code-block {
+            font-family: 'DM Mono', monospace;
+        }
+
+        /* Marker Styling for Editor */
+        .marker-svg {
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
+            display: block;
+        }
+    </style>
+</head>
+
+<body class="h-screen w-screen overflow-hidden flex flex-col">
+
+    <div id="app" class="h-full flex flex-col">
+
+        <!-- Header -->
+        <header class="bg-earth text-linen px-6 py-4 flex justify-between items-center shadow-sm shrink-0">
+            <div class="flex items-center gap-3">
+                <i class="ph ph-polygon text-2xl text-dull-purple-light"></i>
+                <h1 class="font-semibold text-lg tracking-wide">Interactive Image <span
+                        class="font-light opacity-70">Creator</span></h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <button @click="openPreviewModal"
+                    class="bg-linen text-earth hover:bg-white px-5 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium">
+                    <i class="ph ph-play"></i> Test Preview
+                </button>
+                <button @click="openExportModal"
+                    class="bg-dull-purple hover:bg-dull-purple-light text-white px-5 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium">
+                    <i class="ph ph-code"></i> Generate Component
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="flex-1 flex overflow-hidden">
+
+            <!-- Left Sidebar: Scene List -->
+            <aside class="w-64 bg-white border-r border-linen-dark flex flex-col shrink-0">
+                <div class="p-4 border-b border-linen-dark">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-charcoal mb-3 opacity-70">Scenes (Images)
+                    </h2>
+                    <label
+                        class="cursor-pointer flex items-center justify-center w-full p-3 border-2 border-dashed border-dull-purple rounded-lg hover:bg-linen transition group">
+                        <input type="file" multiple accept="image/png, image/jpeg, image/svg+xml" class="hidden"
+                            @change="handleFileUpload">
+                        <div class="text-center">
+                            <i class="ph ph-plus text-dull-purple group-hover:scale-110 transition text-xl"></i>
+                            <span class="text-xs block mt-1 text-dull-purple">Add Images</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-2 space-y-2">
+
+                    <!-- Group 1: Connected/Active Scenes -->
+                    <div v-if="groupedScenes.connected.length > 0">
+                        <div
+                            class="px-2 py-1 text-[10px] font-bold text-dull-purple uppercase tracking-widest opacity-80 mt-2 mb-1">
+                            Interactive Scenes</div>
+                        <div v-for="scene in groupedScenes.connected" :key="scene.id" @click="switchScene(scene.id)"
+                            class="p-2 rounded-lg cursor-pointer transition flex items-center gap-3 group relative"
+                            :class="activeSceneId === scene.id ? 'bg-linen border border-dull-purple' : 'hover:bg-gray-50 border border-transparent'">
+                            <div
+                                class="w-8 h-8 bg-gray-200 rounded overflow-hidden shrink-0 border border-gray-300 relative">
+                                <img :src="scene.url" class="w-full h-full object-cover opacity-80">
+                                <div v-if="scene.isSvg && scene.svgContent"
+                                    class="absolute bottom-0 right-0 bg-dull-purple text-white text-[6px] px-1 rounded-tl">
+                                    SVG</div>
+                            </div>
+                            <div class="overflow-hidden flex-1">
+                                <p class="text-sm font-medium truncate text-charcoal">{{ scene.name }}</p>
+                            </div>
+                            <button @click.stop="removeScene(scene.id)"
+                                class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 p-1">
+                                <i class="ph ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Divider if both exist -->
+                    <div v-if="groupedScenes.connected.length > 0 && groupedScenes.unconnected.length > 0"
+                        class="h-px bg-linen-dark my-2"></div>
+
+                    <!-- Group 2: Unconnected Scenes -->
+                    <div v-if="groupedScenes.unconnected.length > 0">
+                        <div
+                            class="px-2 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest opacity-80 mt-2 mb-1">
+                            Unused Scenes</div>
+                        <div v-for="scene in groupedScenes.unconnected" :key="scene.id" @click="switchScene(scene.id)"
+                            class="p-2 rounded-lg cursor-pointer transition flex items-center gap-3 group relative opacity-70 hover:opacity-100"
+                            :class="activeSceneId === scene.id ? 'bg-linen border border-dull-purple' : 'hover:bg-gray-50 border border-transparent'">
+                            <div
+                                class="w-8 h-8 bg-gray-200 rounded overflow-hidden shrink-0 border border-gray-300 relative">
+                                <img :src="scene.url" class="w-full h-full object-cover opacity-80">
+                                <div v-if="scene.isSvg && scene.svgContent"
+                                    class="absolute bottom-0 right-0 bg-dull-purple text-white text-[6px] px-1 rounded-tl">
+                                    SVG</div>
+                            </div>
+                            <div class="overflow-hidden flex-1">
+                                <p class="text-sm font-medium truncate text-charcoal">{{ scene.name }}</p>
+                            </div>
+                            <button @click.stop="removeScene(scene.id)"
+                                class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 p-1">
+                                <i class="ph ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </aside>
+
+            <!-- Center: Canvas -->
+            <section class="flex-1 bg-linen relative flex flex-col overflow-hidden">
+
+                <!-- Toolbar -->
+                <div class="h-12 bg-white border-b border-linen-dark flex items-center justify-between px-4 shrink-0">
+                    <div class="flex items-center gap-2">
+                        <button @click="toggleMode"
+                            class="flex items-center gap-2 px-3 py-1.5 rounded text-sm transition"
+                            :class="isAddingMode ? 'bg-dull-purple text-white shadow-inner' : 'bg-linen hover:bg-gray-100 text-charcoal'"
+                            title="Shortcut: 'M'">
+                            <i class="ph" :class="isAddingMode ? 'ph-crosshair' : 'ph-cursor'"></i>
+                            {{ isAddingMode ? 'Place Mode (M)' : 'Select Mode (M)' }}
+                        </button>
+                        <span class="text-xs text-gray-400 ml-2" v-if="isAddingMode">Click image to add hotspot</span>
+                    </div>
+                    <div class="text-xs text-charcoal opacity-60">
+                        {{ activeScene ? `${activeScene.width}px x ${activeScene.height}px` : 'No image selected' }}
+                    </div>
+                </div>
+
+                <!-- Viewport -->
+                <div class="flex-1 overflow-auto p-8 flex items-center justify-center checkerboard relative"
+                    id="canvas-container">
+
+                    <div v-if="!scenes.length" class="text-center opacity-50 text-earth">
+                        <i class="ph ph-images text-4xl mb-2"></i>
+                        <p>Upload images to start</p>
+                    </div>
+
+                    <div v-else-if="activeScene" class="relative shadow-lg transition-all duration-300 group"
+                        :style="{ width: '100%', maxWidth: '800px' }">
+                        <!-- The Image -->
+                        <img ref="imageRef" :src="activeScene.url" class="w-full h-auto block select-none"
+                            @load="onImageLoad($event, activeScene)" @click="handleCanvasClick" draggable="false">
+
+                        <!-- Editor Visual: Navigation Controls -->
+                        <div v-if="config.navControls"
+                            class="absolute flex gap-1 z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity"
+                            :class="{
+                                 'top-0 left-0': config.navPosition === 'tl',
+                                 'top-0 right-0': config.navPosition === 'tr',
+                                 'bottom-0 left-0': config.navPosition === 'bl',
+                                 'bottom-0 right-0': config.navPosition === 'br',
+                             }" :style="{ margin: config.navPadding + 'px' }">
+                            <button
+                                class="rounded-full p-2 shadow-md w-8 h-8 flex items-center justify-center border border-black/5"
+                                :style="{ backgroundColor: config.navBtnBg, color: config.navBtnColor }">
+                                <i class="ph ph-caret-left"></i>
+                            </button>
+                            <button
+                                class="rounded-full p-2 shadow-md w-8 h-8 flex items-center justify-center border border-black/5"
+                                :style="{ backgroundColor: config.navBtnBg, color: config.navBtnColor }">
+                                <i class="ph ph-caret-right"></i>
+                            </button>
+                        </div>
+
+                        <!-- Hotspots -->
+                        <div v-for="(hs, idx) in activeScene.hotspots" :key="idx"
+                            class="absolute cursor-pointer group z-10 flex items-center justify-center transition-transform hover:scale-110"
+                            :style="{ 
+                                left: hs.x + '%', 
+                                top: hs.y + '%',
+                                width: (hs.shape === 'dot' ? '3%' : '4%'),
+                                minWidth: (hs.shape === 'dot' ? '20px' : '24px'),
+                                maxWidth: (hs.shape === 'dot' ? '24px' : '30px'),
+                                aspectRatio: '1/1'
+                            }" @click.stop="selectHotspot(hs)">
+                            <!-- The visual marker -->
+                            <div class="w-full h-full opacity-90 shadow-sm"
+                                :class="{'ring-2 ring-charcoal ring-offset-2': selectedHotspot === hs && !contextPopup.visible}"
+                                :style="{ color: hs.color }">
+                                <!-- Render SVG or Dot -->
+                                <div v-if="hs.shape === 'dot'" class="w-full h-full rounded-full bg-current"></div>
+                                <div v-else class="w-full h-full" v-html="getShapeSvg(hs.shape)"></div>
+                            </div>
+
+                            <!-- Label on hover -->
+                            <div v-if="!contextPopup.visible"
+                                class="absolute bottom-full mb-2 bg-charcoal text-linen text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity">
+                                <span v-if="hs.action === 'link'">Link: {{ hs.url }}</span>
+                                <span v-else>Go to: {{ getSceneName(hs.targetSceneId) }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Context Popup for NEW Hotspots -->
+                        <div v-if="contextPopup.visible"
+                            class="absolute bg-white p-3 rounded-lg shadow-xl border border-dull-purple z-50 flex flex-col gap-2 min-w-[220px]"
+                            :style="{ left: contextPopup.x + '%', top: contextPopup.y + '%' }" @click.stop>
+                            <!-- Action Switcher -->
+                            <div class="flex bg-linen rounded p-0.5 border border-gray-200 mb-1">
+                                <button @click="contextPopup.hotspot.action = 'scene'"
+                                    class="flex-1 text-[10px] py-1 rounded transition"
+                                    :class="contextPopup.hotspot.action === 'scene' ? 'bg-white shadow text-dull-purple font-bold' : 'text-gray-500'">Scene</button>
+                                <button @click="contextPopup.hotspot.action = 'link'"
+                                    class="flex-1 text-[10px] py-1 rounded transition"
+                                    :class="contextPopup.hotspot.action === 'link' ? 'bg-white shadow text-dull-purple font-bold' : 'text-gray-500'">Link</button>
+                            </div>
+
+                            <!-- Scene Selector -->
+                            <div v-if="contextPopup.hotspot.action === 'scene'">
+                                <p class="text-[10px] font-bold text-charcoal mb-1">Target Image:</p>
+                                <select ref="popupSelect" v-model="contextPopup.hotspot.targetSceneId"
+                                    @change="confirmContextPopup"
+                                    class="w-full bg-linen border border-gray-200 rounded p-1 text-xs focus:outline-none focus:border-dull-purple text-charcoal">
+                                    <option :value="null" disabled>Choose destination...</option>
+                                    <option v-for="s in scenes" :key="s.id" :value="s.id"
+                                        :disabled="s.id === activeSceneId">
+                                        {{ s.name }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Link Input -->
+                            <div v-else>
+                                <p class="text-[10px] font-bold text-charcoal mb-1">URL:</p>
+                                <input ref="popupSelect" type="text" v-model="contextPopup.hotspot.url"
+                                    placeholder="https://site.com or /page"
+                                    class="w-full bg-linen border border-gray-200 rounded p-1 text-xs focus:outline-none focus:border-dull-purple text-charcoal mb-2"
+                                    @keydown.enter="confirmContextPopup">
+                                <div class="flex items-center gap-2 justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <input type="checkbox" v-model="contextPopup.hotspot.newTab" id="popup-newtab"
+                                            class="rounded text-dull-purple w-3 h-3">
+                                        <label for="popup-newtab" class="text-[10px] text-charcoal">New Tab</label>
+                                    </div>
+                                    <button @click="confirmContextPopup"
+                                        class="bg-dull-purple hover:bg-dull-purple/90 text-white text-[10px] px-3 py-1 rounded transition">Done</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Right Sidebar: Properties -->
+            <aside class="w-72 bg-white border-l border-linen-dark flex flex-col shrink-0 overflow-y-auto">
+
+                <!-- Global Settings -->
+                <div class="p-5 border-b border-linen-dark">
+                    <div @click="isGlobalConfigOpen = !isGlobalConfigOpen"
+                        class="flex justify-between items-center cursor-pointer select-none group">
+                        <h3
+                            class="text-charcoal font-semibold flex items-center gap-2 group-hover:text-dull-purple transition-colors">
+                            <i class="ph ph-gear"></i> Global Config
+                        </h3>
+                        <i class="ph ph-caret-down transition-transform duration-200 text-gray-400"
+                            :class="{'rotate-180': !isGlobalConfigOpen}"></i>
+                    </div>
+
+                    <div v-show="isGlobalConfigOpen" class="space-y-3 mt-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">HTML ID Prefix</label>
+                            <input type="text" v-model="config.idPrefix"
+                                class="w-full bg-linen border border-gray-200 rounded p-2 text-sm focus:outline-none focus:border-dull-purple text-charcoal">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Image Asset Path</label>
+                            <input type="text" v-model="config.assetPath" placeholder="e.g. /assets/images/"
+                                class="w-full bg-linen border border-gray-200 rounded p-2 text-sm focus:outline-none focus:border-dull-purple text-charcoal">
+                        </div>
+
+                        <!-- Loading Strategy (PageSpeed) -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Loading Strategy</label>
+                            <select v-model="config.loadingStrategy"
+                                class="w-full bg-linen border border-gray-200 rounded p-2 text-sm focus:outline-none focus:border-dull-purple text-charcoal">
+                                <option value="lazy">Lazy (Below Fold) - Recommended</option>
+                                <option value="eager">Immediate (LCP) - High Priority</option>
+                            </select>
+                            <p class="text-[10px] text-gray-400 mt-1">
+                                {{ config.loadingStrategy === 'lazy' ? 'Defers loading of images and scripts until
+                                needed. Best for PageSpeed.' : 'Loads immediately. Use ONLY if this is the very first
+                                thing user sees.' }}
+                            </p>
+                        </div>
+
+                        <div class="flex items-center gap-2 pt-2">
+                            <input type="checkbox" id="embedSvgs" v-model="config.embedSvgs"
+                                class="rounded border-gray-300 text-dull-purple focus:ring-dull-purple">
+                            <label for="embedSvgs" class="text-xs font-bold text-gray-500">Embed SVGs (Inline)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Settings -->
+                <div class="p-5 border-b border-linen-dark">
+                    <div @click="isNavConfigOpen = !isNavConfigOpen"
+                        class="flex justify-between items-center cursor-pointer select-none group">
+                        <h3
+                            class="text-charcoal font-semibold flex items-center gap-2 group-hover:text-dull-purple transition-colors">
+                            <i class="ph ph-arrows-left-right"></i> Navigation Controls
+                        </h3>
+                        <i class="ph ph-caret-down transition-transform duration-200 text-gray-400"
+                            :class="{'rotate-180': !isNavConfigOpen}"></i>
+                    </div>
+
+                    <div v-show="isNavConfigOpen" class="space-y-3 mt-3">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="navControls" v-model="config.navControls"
+                                class="rounded border-gray-300 text-dull-purple focus:ring-dull-purple">
+                            <label for="navControls" class="text-xs font-bold text-gray-500">Show Back/Forward</label>
+                        </div>
+
+                        <div v-if="config.navControls" class="space-y-3 pl-2 border-l-2 border-linen-dark mt-2">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Position</label>
+                                <select v-model="config.navPosition"
+                                    class="w-full bg-linen border border-gray-200 rounded p-2 text-sm focus:outline-none focus:border-dull-purple text-charcoal">
+                                    <option value="tl">Top Left</option>
+                                    <option value="tr">Top Right</option>
+                                    <option value="bl">Bottom Left</option>
+                                    <option value="br">Bottom Right</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Padding (px)</label>
+                                <input type="number" v-model="config.navPadding"
+                                    class="w-full bg-linen border border-gray-200 rounded p-2 text-sm focus:outline-none focus:border-dull-purple text-charcoal">
+                            </div>
+                            <div class="flex gap-2">
+                                <div class="flex-1">
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Button Color</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="color" v-model="config.navBtnBg"
+                                            class="h-8 w-full rounded border-0 bg-transparent cursor-pointer p-0">
+                                    </div>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Icon Color</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="color" v-model="config.navBtnColor"
+                                            class="h-8 w-full rounded border-0 bg-transparent cursor-pointer p-0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hotspot Properties -->
+                <div v-if="selectedHotspot" class="p-5">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-charcoal font-semibold flex items-center gap-2">
+                            <i class="ph ph-target"></i> Hotspot
+                        </h3>
+                        <!-- Improved Delete Button -->
+                        <button @click="deleteSelectedHotspot"
+                            class="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-all"
+                            title="Delete Hotspot">
+                            <i class="ph ph-trash text-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Action Selector -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Action Type</label>
+                            <div class="flex bg-linen rounded p-1 border border-gray-200">
+                                <button @click="selectedHotspot.action = 'scene'"
+                                    class="flex-1 text-xs py-1.5 rounded transition"
+                                    :class="selectedHotspot.action === 'scene' ? 'bg-white shadow text-dull-purple font-medium' : 'text-gray-500 hover:text-charcoal'">Switch
+                                    Image</button>
+                                <button @click="selectedHotspot.action = 'link'"
+                                    class="flex-1 text-xs py-1.5 rounded transition"
+                                    :class="selectedHotspot.action === 'link' ? 'bg-white shadow text-dull-purple font-medium' : 'text-gray-500 hover:text-charcoal'">Open
+                                    Link</button>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Content based on Action -->
+                        <div v-if="selectedHotspot.action === 'scene'">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Target Image</label>
+                            <select v-model="selectedHotspot.targetSceneId"
+                                class="w-full bg-linen border border-gray-200 rounded p-2 text-sm focus:outline-none focus:border-dull-purple text-charcoal">
+                                <option :value="null" disabled>Select an image...</option>
+                                <option v-for="s in scenes" :key="s.id" :value="s.id"
+                                    :disabled="s.id === activeSceneId">
+                                    {{ s.name }} {{ s.id === activeSceneId ? '(Current)' : ''}}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div v-else class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">URL</label>
+                                <input type="text" v-model="selectedHotspot.url" placeholder="https://site.com or /page"
+                                    class="w-full bg-linen border border-gray-200 rounded p-2 text-sm focus:outline-none focus:border-dull-purple text-charcoal">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="newTab" v-model="selectedHotspot.newTab"
+                                    class="rounded border-gray-300 text-dull-purple focus:ring-dull-purple">
+                                <label for="newTab" class="text-sm text-charcoal">Open in new tab</label>
+                            </div>
+                        </div>
+
+                        <!-- Shape & Color Combined Row -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Shape & Color</label>
+                            <div class="flex justify-between items-center">
+                                <!-- Shapes -->
+                                <div class="flex gap-2">
+                                    <button v-for="shape in ['dot', 'pin', 'cursor']" :key="shape"
+                                        @click="selectedHotspot.shape = shape"
+                                        class="p-2 rounded border transition flex items-center justify-center h-10 w-10"
+                                        :class="selectedHotspot.shape === shape ? 'border-dull-purple bg-linen shadow-sm' : 'border-gray-200 hover:bg-gray-50'"
+                                        :title="shape">
+                                        <!-- Render with dynamic color for preview -->
+                                        <div v-if="shape === 'dot'" class="w-3 h-3 rounded-full transition-colors"
+                                            :style="{ backgroundColor: selectedHotspot.color }"></div>
+                                        <div v-else class="w-5 h-5 transition-colors"
+                                            :style="{ color: selectedHotspot.color }" v-html="getShapeSvg(shape)"></div>
+                                    </button>
+                                </div>
+
+                                <!-- Color Picker (Right Aligned) -->
+                                <div class="h-10 w-10 relative group">
+                                    <input type="color" v-model="selectedHotspot.color"
+                                        class="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                                        title="Change Color">
+                                    <div
+                                        class="w-full h-full rounded border border-gray-200 flex items-center justify-center shadow-sm group-hover:border-dull-purple transition-colors bg-white">
+                                        <div class="w-6 h-6 rounded border border-gray-100 shadow-inner"
+                                            :style="{ backgroundColor: selectedHotspot.color }"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else class="p-5 text-center opacity-50 mt-10">
+                    <i class="ph ph-hand-pointing text-3xl mb-2"></i>
+                    <p class="text-sm">Select a hotspot on the canvas to edit its properties.</p>
+                </div>
+
+            </aside>
+        </main>
+
+        <!-- Export Modal -->
+        <div v-if="showExport" @click.self="showExport = false"
+            class="fixed inset-0 bg-charcoal/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm cursor-pointer">
+            <div
+                class="bg-white w-full max-w-4xl h-[80vh] rounded-xl flex flex-col shadow-2xl overflow-hidden cursor-default">
+                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-linen">
+                    <h2 class="font-semibold text-charcoal flex items-center gap-2">
+                        <i class="ph ph-file-code"></i> Generated Code
+                    </h2>
+                    <button @click="showExport = false" class="text-gray-500 hover:text-charcoal">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="flex-1 bg-[#2d2d2d] p-0 overflow-hidden relative group flex flex-col">
+
+                    <!-- New Dark Toolbar for Copy Action -->
+                    <div class="bg-[#1e1e1e] px-4 py-2 flex justify-end items-center border-b border-gray-700 shrink-0">
+                        <button @click="copyCode"
+                            class="flex items-center gap-2 text-xs uppercase tracking-wider font-bold text-gray-400 hover:text-white transition px-3 py-2 rounded hover:bg-white/5">
+                            <i class="ph" :class="copyBtnIcon"></i> {{ copyBtnText }}
+                        </button>
+                    </div>
+
+                    <div class="flex-1 overflow-auto custom-scrollbar relative">
+                        <pre
+                            class="m-0 p-6 !bg-transparent"><code ref="codeBlock" class="language-html text-sm code-block"></code></pre>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-white text-xs text-gray-500 border-t border-gray-100 flex justify-between">
+                    <span>Ensure you copy any external images to: <strong>{{ config.assetPath }}</strong></span>
+                    <span>Stand-alone HTML div. No build required.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Modal -->
+        <div v-if="showPreview" @click.self="showPreview = false"
+            class="fixed inset-0 bg-charcoal/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm cursor-pointer">
+            <div
+                class="bg-white w-full max-w-6xl h-[90vh] rounded-xl flex flex-col shadow-2xl overflow-hidden cursor-default">
+                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-linen">
+                    <div class="flex items-center gap-4">
+                        <h2 class="font-semibold text-charcoal flex items-center gap-2">
+                            <i class="ph ph-play"></i> Live Preview
+                        </h2>
+
+                        <!-- Device Switcher -->
+                        <div class="bg-white border border-gray-200 rounded-lg flex items-center p-1 gap-1">
+                            <button @click="previewDevice = 'mobile'"
+                                class="p-1.5 rounded hover:bg-linen text-charcoal transition"
+                                :class="{'bg-dull-purple text-white hover:bg-dull-purple': previewDevice === 'mobile'}"
+                                title="Mobile (375px)">
+                                <i class="ph ph-device-mobile text-lg"></i>
+                            </button>
+                            <button @click="previewDevice = 'tablet'"
+                                class="p-1.5 rounded hover:bg-linen text-charcoal transition"
+                                :class="{'bg-dull-purple text-white hover:bg-dull-purple': previewDevice === 'tablet'}"
+                                title="Tablet (768px)">
+                                <i class="ph ph-device-tablet text-lg"></i>
+                            </button>
+                            <button @click="previewDevice = 'desktop'"
+                                class="p-1.5 rounded hover:bg-linen text-charcoal transition"
+                                :class="{'bg-dull-purple text-white hover:bg-dull-purple': previewDevice === 'desktop'}"
+                                title="Desktop (100%)">
+                                <i class="ph ph-desktop text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <span class="text-xs text-gray-500">Interactivity Test</span>
+                        <button @click="showPreview = false" class="text-gray-500 hover:text-charcoal">
+                            <i class="ph ph-x text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Iframe Container -->
+                <div class="flex-1 bg-gray-200 p-8 overflow-hidden relative flex justify-center">
+                    <div class="bg-white shadow-2xl transition-all duration-300 ease-in-out h-full flex flex-col"
+                        :style="{
+                            width: previewDevice === 'mobile' ? '375px' : previewDevice === 'tablet' ? '768px' : '100%',
+                            borderRadius: previewDevice === 'desktop' ? '0' : '12px',
+                            border: previewDevice === 'desktop' ? 'none' : '1px solid #e5e7eb'
+                        }">
+                        <iframe ref="previewFrame" class="w-full h-full border-none rounded-inherit"></iframe>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-white text-xs text-gray-500 border-t border-gray-100 text-center">
+                    This preview uses the exact HTML/CSS/JS generated by the tool, embedded in a mock page.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, onUnmounted, nextTick, watch } = Vue;
+
+        // Define Shapes
+        const SHAPES = {
+            cursor: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="marker-svg"><path fill="currentColor" d="M4.002 2.998a1 1 0 0 1 1.6-.8L13.6 8.2c.768.576.36 1.8-.6 1.8H9.053a1 1 0 0 0-.793.39l-2.466 3.215c-.581.758-1.793.347-1.793-.609z"/></svg>`,
+            pin: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 25" class="marker-svg"><path fill="currentColor" d="M11 21.715v-3.858a1 1 0 1 1 2 0v3.858l-.005.101a1 1 0 0 1-1.99 0z"/><path fill="currentColor" d="m15.713 7.47l.437-1.53a1.746 1.746 0 0 0-1.679-2.226H10.23A2.32 2.32 0 0 0 7.955 6.49Q8 6.715 8 6.945v3.879c0 .899-.315 1.77-.89 2.46l-.874 1.048a1.758 1.758 0 0 0 1.35 2.883h8.972a1.307 1.307 0 0 0 1.087-2.032l-.98-1.471a4.9 4.9 0 0 1-.797-2.187l-.283-2.541a3.9 3.9 0 0 1 .127-1.513Z"/><path fill="currentColor" d="M7.182 11.357v-3.85c0-.335-.118-.71-.335-1.168a5.5 5.5 0 0 1-.31-.804c-.265-.899.08-1.68.663-2.168c.536-.449 1.255-.653 1.924-.653h3.513l.101.005a1 1 0 0 1 0 1.99l-.101.005H9.124c-.303 0-.537.099-.64.186a.2.2 0 0 0-.037.036q0 .01.007.034c.05.17.12.344.198.51c.262.55.53 1.247.53 2.027v3.85c0 1.03-.442 1.971-1.109 2.667a13 13 0 0 0-1.169 1.39c-.114.16-.133.27-.135.322a.25.25 0 0 0 .052.159c.089.126.352.32.83.32h4.986l.101.004a1 1 0 0 1 0 1.99l-.101.005H7.65c-.986 0-1.929-.402-2.467-1.17c-.58-.826-.556-1.887.094-2.795c.356-.495.8-1.035 1.352-1.61c.358-.373.552-.833.552-1.282Z"/><path fill="currentColor" d="M16.818 11.357v-3.85c0-.335.117-.71.335-1.168c.116-.242.226-.515.31-.804c.265-.899-.08-1.68-.663-2.168c-.536-.449-1.255-.653-1.924-.653h-3.513l-.101.005a1 1 0 0 0 0 1.99l.101.005h3.513c.303 0 .537.099.64.186q.028.024.037.036q0 .01-.007.034c-.05.17-.12.344-.198.51c-.262.55-.53 1.247-.53 2.027v3.85c0 1.03.442 1.971 1.109 2.667c.49.511.873.978 1.169 1.39c.114.16.133.27.134.322a.25.25 0 0 1-.051.159c-.089.126-.352.32-.83.32h-4.986l-.101.004a1 1 0 0 0 0 1.99l.101.005h4.986c.986 0 1.929-.402 2.467-1.17c.58-.826.556-1.887-.094-2.795a15 15 0 0 0-1.352-1.61c-.358-.373-.552-.833-.552-1.282"/></svg>`
+        };
+
+        createApp({
+            setup() {
+                // Data
+                const scenes = ref([]);
+                const activeSceneId = ref(null);
+                const isAddingMode = ref(false);
+                const selectedHotspot = ref(null);
+                const showExport = ref(false);
+                const showPreview = ref(false);
+                const generatedCode = ref('');
+                const copyBtnText = ref('Copy Code');
+                const copyBtnIcon = ref('ph-copy');
+                const imageRef = ref(null);
+                const codeBlock = ref(null);
+                // codeArea removed
+                const previewFrame = ref(null);
+                const popupSelect = ref(null);
+                const previewDevice = ref('desktop');
+
+                // UI State for Sections
+                const isGlobalConfigOpen = ref(true);
+                const isNavConfigOpen = ref(true);
+
+                const config = ref({
+                    idPrefix: 'my-map',
+                    assetPath: 'assets/images/',
+                    embedSvgs: false,
+                    navControls: false,
+                    navPosition: 'br',
+                    navPadding: 20,
+                    navBtnBg: '#ffffff',
+                    navBtnColor: '#333333',
+                    loadingStrategy: 'lazy'
+                });
+
+                // Popup State
+                const contextPopup = ref({
+                    visible: false,
+                    x: 0,
+                    y: 0,
+                    hotspot: null,
+                    tempTargetId: null
+                });
+
+                // Computed Props
+                const activeScene = computed(() => scenes.value.find(s => s.id === activeSceneId.value));
+
+                // Separate scenes into groups
+                const groupedScenes = computed(() => {
+                    const connected = [];
+                    const unconnected = [];
+
+                    scenes.value.forEach(scene => {
+                        // Is this scene a target of any hotspot in any scene?
+                        const isTarget = scenes.value.some(s =>
+                            s.hotspots.some(h => h.targetSceneId === scene.id)
+                        );
+                        // Does it have hotspots itself?
+                        const hasHotspots = scene.hotspots.length > 0;
+
+                        if (isTarget || hasHotspots) {
+                            connected.push(scene);
+                        } else {
+                            unconnected.push(scene);
+                        }
+                    });
+                    return { connected, unconnected };
+                });
+
+                // Initialization (Random Data)
+                onMounted(() => {
+                    // Load some placeholders
+                    const demoImages = [
+                        { name: 'Attention Overview', url: 'https://upload.wikimedia.org/wikipedia/commons/6/62/Attention_mechanism_overview.svg' },
+                        { name: 'Attention Output', url: 'https://upload.wikimedia.org/wikipedia/commons/2/22/Attention_mechanism_output.svg' },
+                        { name: 'RAG Schema', url: 'https://upload.wikimedia.org/wikipedia/commons/3/37/RAG_schema.svg' }
+                    ];
+
+                    demoImages.forEach((img, i) => {
+                        const id = 'scene_' + Math.random().toString(36).substr(2, 9);
+                        scenes.value.push({
+                            id: id,
+                            name: img.name,
+                            url: img.url,
+                            fileName: `demo-image-${i + 1}.svg`,
+                            isSvg: true,
+                            svgContent: null,
+                            width: 0,
+                            height: 0,
+                            hotspots: []
+                        });
+
+                        fetch(img.url)
+                            .then(res => res.text())
+                            .then(text => {
+                                if (text.trim().startsWith('<svg') || text.includes('<svg')) {
+                                    const s = scenes.value.find(sc => sc.id === id);
+                                    if (s) s.svgContent = text;
+                                }
+                            })
+                            .catch(e => console.log("Could not fetch demo SVG", e));
+                    });
+
+                    if (scenes.value.length) activeSceneId.value = scenes.value[0].id;
+
+                    // Keyboard Listener
+                    window.addEventListener('keydown', handleKeydown);
+                });
+
+                onUnmounted(() => {
+                    window.removeEventListener('keydown', handleKeydown);
+                });
+
+                const handleKeydown = (e) => {
+                    // Toggle 'M' for mode, but not if typing in input
+                    if (e.key.toLowerCase() === 'm' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !contextPopup.value.visible) {
+                        toggleMode();
+                    }
+                };
+
+                // Helper to wrap component in a fake blog layout
+                const wrapWithMockContent = (componentHtml) => {
+                    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock Preview</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap');
+        
+        body {
+            margin: 0;
+            font-family: 'Merriweather', serif;
+            line-height: 1.8;
+            color: #2D2A27;
+            background-color: #FDFAF7;
+        }
+        
+        /* Fake Navigation */
+        nav {
+            background: #ffffff;
+            border-bottom: 1px solid #EAE5E0;
+            padding: 1rem 2rem;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .logo { font-weight: 700; letter-spacing: -0.5px; font-size: 1.25rem; color: #1C1917; }
+        .nav-links { display: flex; gap: 1.5rem; font-size: 0.9rem; color: #5F328C; }
+        
+        /* Fake Article */
+        .container {
+            max-width: 700px;
+            margin: 3rem auto;
+            padding: 0 1.5rem;
+        }
+        
+        h1 {
+            font-family: 'Inter', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            letter-spacing: -1px;
+        }
+        
+        .meta {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 2.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .avatar { width: 24px; height: 24px; border-radius: 50%; background: #DCD2F0; }
+        
+        p { margin-bottom: 1.5rem; font-size: 1.125rem; }
+        
+        .highlight-box {
+            background: #ffffff;
+            border: 1px solid #EAE5E0;
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2.5rem -1.5rem; /* Breakout of container slightly */
+        }
+
+        @media(max-width: 700px) {
+            .highlight-box { margin: 2rem 0; padding: 1rem; }
+        }
+        
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">TechInsider</div>
+        <div class="nav-links">
+            <span>Articles</span>
+            <span>About</span>
+            <span>Subscribe</span>
+        </div>
+    </nav>
+
+    <article class="container">
+        <h1>Understanding Complex Systems: An Interactive Visual Guide</h1>
+        
+        <div class="meta">
+            <div class="avatar"></div>
+            <span>By Sarah Architect &bull; Nov 20, 2025 &bull; 6 min read</span>
+        </div>
+
+        <p>When analyzing distributed architectures, it's easy to get lost in static diagrams. The relationship between components is often dynamic, requiring a deeper level of exploration to truly grasp the data flow.</p>
+        
+        <p>In this article, we've broken down the core mechanism. Instead of showing you ten different slides, we've consolidated the entire workflow into the interactive figure below.</p>
+
+        <div class="highlight-box">
+            <!-- COMPONENT START -->
+            ${componentHtml}
+            <!-- COMPONENT END -->
+        </div>
+
+        <p class="caption" style="font-family: 'Inter', sans-serif; font-size: 0.9rem; color: #666; text-align: center; margin-top: -1rem; margin-bottom: 2rem;">
+            <em>Figure 1: Click on the pulsating markers to explore different subsystems.</em>
+        </p>
+
+        <p>As you navigated through the figure above, you likely noticed how the attention mechanism shifts focus based on the input query. This modular approach allows for greater scalability and easier debugging in production environments.</p>
+        
+        <p>Traditionally, this would require navigating to separate pages. By embedding this interactivity directly into the content, we maintain context and improve the reading experience.</p>
+        
+        <p>Feel free to integrate similar patterns into your own documentation stack.</p>
+    </article>
+</body>
+</html>
+                    `;
+                };
+
+                // Watch preview state to populate iframe
+                watch(showPreview, (val) => {
+                    if (val) {
+                        nextTick(() => {
+                            if (previewFrame.value) {
+                                const rawHtml = buildHtml(true);
+                                const fullPage = wrapWithMockContent(rawHtml);
+                                const doc = previewFrame.value.contentWindow.document;
+                                doc.open();
+                                doc.write(fullPage);
+                                doc.close();
+                            }
+                        });
+                    }
+                });
+
+                // Methods
+                const toggleMode = () => {
+                    isAddingMode.value = !isAddingMode.value;
+                    // Clear context popup if changing modes
+                    if (contextPopup.value.visible) closeContextPopup();
+                };
+
+                const handleFileUpload = (event) => {
+                    const files = Array.from(event.target.files);
+                    files.forEach(file => {
+                        const isSvg = file.type === 'image/svg+xml';
+
+                        const scene = {
+                            id: 'scene_' + Math.random().toString(36).substr(2, 9),
+                            name: file.name.split('.')[0],
+                            fileName: file.name,
+                            isSvg: isSvg,
+                            svgContent: null,
+                            width: 0,
+                            height: 0,
+                            hotspots: []
+                        };
+
+                        const readerUrl = new FileReader();
+                        readerUrl.onload = (e) => {
+                            scene.url = e.target.result;
+                            scenes.value.push(scene);
+                            if (!activeSceneId.value) activeSceneId.value = scene.id;
+                        };
+                        readerUrl.readAsDataURL(file);
+
+                        if (isSvg) {
+                            const readerText = new FileReader();
+                            readerText.onload = (e) => {
+                                scene.svgContent = e.target.result;
+                            };
+                            readerText.readAsText(file);
+                        }
+                    });
+                };
+
+                const onImageLoad = (e, scene) => {
+                    scene.width = e.target.naturalWidth;
+                    scene.height = e.target.naturalHeight;
+                };
+
+                const switchScene = (id) => {
+                    activeSceneId.value = id;
+                    selectedHotspot.value = null;
+                    closeContextPopup();
+                };
+
+                const handleCanvasClick = (e) => {
+                    // If context popup is open, click closes it (except if clicked inside, handled by stop prop)
+                    if (contextPopup.value.visible) {
+                        closeContextPopup();
+                        return;
+                    }
+
+                    if (!isAddingMode.value || !activeScene.value) return;
+
+                    const rect = e.target.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+                    const newHotspot = {
+                        x: parseFloat(x.toFixed(2)),
+                        y: parseFloat(y.toFixed(2)),
+                        color: '#5F328C', // Default to accent.light
+                        shape: 'dot', // Default
+                        action: 'scene', // Default action
+                        targetSceneId: null,
+                        url: '',
+                        newTab: true
+                    };
+
+                    activeScene.value.hotspots.push(newHotspot);
+                    selectedHotspot.value = newHotspot;
+
+                    // Open Context Popup
+                    openContextPopup(newHotspot);
+
+                    isAddingMode.value = false; // Exit add mode
+                };
+
+                const openContextPopup = (hotspot) => {
+                    contextPopup.value = {
+                        visible: true,
+                        x: hotspot.x,
+                        y: hotspot.y,
+                        hotspot: hotspot,
+                        tempTargetId: hotspot.targetSceneId
+                    };
+                    // Focus select next tick
+                    nextTick(() => {
+                        if (popupSelect.value) popupSelect.value.focus();
+                    });
+                };
+
+                const confirmContextPopup = () => {
+                    if (contextPopup.value.hotspot) {
+                        if (contextPopup.value.hotspot.action === 'scene' && contextPopup.value.tempTargetId) {
+                            contextPopup.value.hotspot.targetSceneId = contextPopup.value.tempTargetId;
+                        }
+                    }
+                    closeContextPopup();
+                };
+
+                const closeContextPopup = () => {
+                    contextPopup.value.visible = false;
+                    contextPopup.value.hotspot = null;
+                    contextPopup.value.tempTargetId = null;
+                };
+
+                const selectHotspot = (hs) => {
+                    selectedHotspot.value = hs;
+                    isAddingMode.value = false;
+                    closeContextPopup();
+                };
+
+                const deleteSelectedHotspot = () => {
+                    if (!activeScene.value || !selectedHotspot.value) return;
+                    activeScene.value.hotspots = activeScene.value.hotspots.filter(h => h !== selectedHotspot.value);
+                    selectedHotspot.value = null;
+                };
+
+                const removeScene = (id) => {
+                    const index = scenes.value.findIndex(s => s.id === id);
+                    if (index === -1) return;
+
+                    const sceneToRemove = scenes.value[index];
+                    if (activeSceneId.value === sceneToRemove.id) {
+                        activeSceneId.value = null;
+                    }
+                    scenes.value.splice(index, 1);
+
+                    scenes.value.forEach(s => {
+                        s.hotspots.forEach(h => {
+                            if (h.targetSceneId === sceneToRemove.id) h.targetSceneId = null;
+                        });
+                    });
+                };
+
+                const getSceneName = (id) => {
+                    const s = scenes.value.find(sc => sc.id === id);
+                    return s ? s.name : 'None';
+                };
+
+                const getShapeSvg = (shape) => {
+                    if (shape === 'pin') return SHAPES.pin;
+                    if (shape === 'cursor') return SHAPES.cursor;
+                    return ''; // Dot is handled via CSS/Div
+                };
+
+                const buildHtml = (isForPreview) => {
+                    if (!scenes.value.length) return '';
+
+                    const pfx = config.value.idPrefix;
+                    const uniqueId = Math.random().toString(36).substr(2, 6);
+                    const containerId = `${pfx}-container-${uniqueId}`;
+                    const path = config.value.assetPath.endsWith('/') ? config.value.assetPath : config.value.assetPath + '/';
+                    const isLazy = config.value.loadingStrategy === 'lazy';
+
+                    // CSS
+                    const css = `
+<style>
+    /* Base Container Style */
+    .${pfx}-container {
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+        background-color: #FDFAF7; /* bg.light */
+    }
+    .${pfx}-scene {
+        display: none;
+        width: 100%;
+        position: relative;
+        opacity: 0;
+        transition: opacity 0.4s ease-in-out;
+    }
+    .${pfx}-scene.active {
+        display: block;
+        opacity: 1;
+    }
+    .${pfx}-img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+    .${pfx}-hotspot {
+        position: absolute;
+        cursor: pointer;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        aspect-ratio: 1 / 1;
+    }
+    
+    /* Dot Sizing */
+    .${pfx}-size-dot {
+        width: 3%;
+        min-width: 20px;
+        max-width: 24px;
+    }
+
+    /* Icon Sizing */
+    .${pfx}-size-icon {
+        width: 4%;
+        min-width: 24px;
+        max-width: 30px;
+    }
+
+    /* Navigation Controls */
+    .${pfx}-controls {
+        position: absolute;
+        z-index: 20;
+        display: flex;
+        gap: 4px;
+    }
+    .${pfx}-btn {
+        background: ${config.value.navBtnBg};
+        color: ${config.value.navBtnColor};
+        border: 1px solid rgba(0,0,0,0.1);
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: opacity 0.2s;
+    }
+    .${pfx}-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    .${pfx}-btn:hover:not(:disabled) {
+        filter: brightness(95%);
+    }
+    
+    /* Marker Container */
+    .${pfx}-marker {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+    }
+
+    /* SVG Styling */
+    .${pfx}-marker svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        fill: currentColor;
+    }
+
+    /* Dot Shape */
+    .${pfx}-shape-dot {
+        border-radius: 50%;
+        background-color: currentColor;
+    }
+
+    /* Pulse Animation */
+    .${pfx}-hotspot.has-pulse::before {
+        content: '';
+        display: block;
+        position: absolute;
+        top: -50%; left: -50%; right: -50%; bottom: -50%;
+        border-radius: 50%;
+        background-color: currentColor;
+        opacity: 0.4;
+        animation: ${pfx}-pulse 2s infinite;
+        z-index: -1;
+    }
+    
+    @keyframes ${pfx}-pulse {
+        0% { transform: scale(0.5); opacity: 0.6; }
+        100% { transform: scale(1.5); opacity: 0; }
+    }
+</style>`;
+
+                    // HTML
+                    let htmlContent = `<div id="${containerId}" class="${pfx}-container">`;
+
+                    // Configured Nav Controls
+                    if (config.value.navControls) {
+                        let posStyle = '';
+                        const pad = config.value.navPadding + 'px';
+                        switch (config.value.navPosition) {
+                            case 'tl': posStyle = `top:${pad}; left:${pad};`; break;
+                            case 'tr': posStyle = `top:${pad}; right:${pad};`; break;
+                            case 'bl': posStyle = `bottom:${pad}; left:${pad};`; break;
+                            case 'br': posStyle = `bottom:${pad}; right:${pad};`; break;
+                        }
+
+                        const leftArrow = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256"><path fill="currentColor" d="M165.66 202.34a8 8 0 0 1-11.32 11.32l-80-80a8 8 0 0 1 0-11.32l80-80a8 8 0 0 1 11.32 11.32L91.31 128Z"/></svg>`;
+                        const rightArrow = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256"><path fill="currentColor" d="M181.66 133.66l-80 80a8 8 0 0 1-11.32-11.32L164.69 128L90.34 53.66a8 8 0 0 1 11.32-11.32l80 80a8 8 0 0 1 0 11.32Z"/></svg>`;
+
+                        htmlContent += `
+    <div class="${pfx}-controls" style="${posStyle}">
+        <button class="${pfx}-btn ${pfx}-btn-back" aria-label="Back">${leftArrow}</button>
+        <button class="${pfx}-btn ${pfx}-btn-fwd" aria-label="Forward">${rightArrow}</button>
+    </div>`;
+                    }
+
+                    scenes.value.forEach((scene, idx) => {
+                        let src = scene.url;
+                        if (!isForPreview) {
+                            if (src.startsWith('data:')) {
+                                src = `${path}${scene.fileName}`;
+                            }
+                        }
+
+                        const activeClass = idx === 0 ? ' active' : '';
+
+                        // Determine Image Attributes based on Loading Strategy
+                        let imgAttrs = '';
+                        if (isLazy) {
+                            // Lazy: All images get lazy loading
+                            imgAttrs = 'loading="lazy" decoding="async"';
+                        } else {
+                            // Immediate: First image is eager & high priority, others are lazy
+                            if (idx === 0) {
+                                imgAttrs = 'loading="eager" fetchpriority="high"';
+                            } else {
+                                imgAttrs = 'loading="lazy"';
+                            }
+                        }
+
+                        htmlContent += `
+    <div class="${pfx}-scene${activeClass}" data-id="${scene.id}">`;
+
+                        if (config.value.embedSvgs && scene.isSvg && scene.svgContent) {
+                            let svg = scene.svgContent;
+                            if (svg.includes('<svg')) {
+                                svg = svg.replace(/<svg([^>]*)>/, `<svg$1 class="${pfx}-img">`);
+                            } else {
+                                svg = `<div class="${pfx}-img">${svg}</div>`;
+                            }
+                            htmlContent += `\n        ${svg}`;
+                        } else {
+                            htmlContent += `
+        <img src="${src}" class="${pfx}-img" alt="${scene.name}" ${imgAttrs}>`;
+                        }
+
+                        // Hotspots
+                        scene.hotspots.forEach(hs => {
+                            if (hs.targetSceneId || hs.action === 'link') {
+                                const shape = hs.shape || 'dot';
+                                const pulseClass = ' has-pulse';
+                                const sizeClass = shape === 'dot' ? `${pfx}-size-dot` : `${pfx}-size-icon`;
+
+                                let innerContent = '';
+                                if (shape === 'dot') {
+                                    innerContent = `<div class="${pfx}-marker ${pfx}-shape-dot"></div>`;
+                                } else if (shape === 'pin') {
+                                    innerContent = `<div class="${pfx}-marker">${SHAPES.pin}</div>`;
+                                } else if (shape === 'cursor') {
+                                    innerContent = `<div class="${pfx}-marker">${SHAPES.cursor}</div>`;
+                                }
+
+                                let dataAttrs = `style="left: ${hs.x}%; top: ${hs.y}%; color: ${hs.color};"`;
+                                if (hs.action === 'link') {
+                                    dataAttrs += ` data-action="link" data-url="${hs.url || '#'}" data-new-tab="${hs.newTab}"`;
+                                } else {
+                                    dataAttrs += ` data-action="scene" data-target="${hs.targetSceneId}"`;
+                                }
+
+                                htmlContent += `
+        <div class="${pfx}-hotspot ${sizeClass}${pulseClass}" 
+             ${dataAttrs}
+             title="${hs.action === 'link' ? 'Go to Link' : 'Click to navigate'}">
+             ${innerContent}
+        </div>`;
+                            }
+                        });
+
+                        htmlContent += `
+    </div>`;
+                    });
+
+                    htmlContent += `
+</div>`;
+
+                    // Updated JS logic for Actions (Links + Scenes)
+                    let jsContent = `
+    (function() {
+        const container = document.getElementById('${containerId}');
+        if (!container) return;
+
+        const scenes = Array.from(container.querySelectorAll('.${pfx}-scene'));
+        const backBtn = container.querySelector('.${pfx}-btn-back');
+        const fwdBtn = container.querySelector('.${pfx}-btn-fwd');
+        
+        let activeElement = container.querySelector('.${pfx}-scene.active') || scenes[0];
+        let activeId = activeElement ? activeElement.getAttribute('data-id') : null;
+        
+        if (!activeId && scenes.length > 0) activeId = scenes[0].getAttribute('data-id');
+
+        let stack = activeId ? [activeId] : [];
+        let stackIndex = 0;
+
+        function updateButtons() {
+            if(!backBtn) return;
+            backBtn.disabled = stackIndex <= 0;
+            fwdBtn.disabled = stackIndex >= stack.length - 1;
+        }
+
+        function showScene(id) {
+            scenes.forEach(s => {
+                if (s.getAttribute('data-id') === id) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+        }
+
+        function navigateTo(id, isHistoryNav = false) {
+            if (!isHistoryNav) {
+                if (stackIndex < stack.length - 1) {
+                    stack = stack.slice(0, stackIndex + 1);
+                }
+                stack.push(id);
+                stackIndex++;
+            }
+            showScene(id);
+            updateButtons();
+        }
+
+        container.addEventListener('click', function(e) {
+            const hotspot = e.target.closest('.${pfx}-hotspot');
+            if (hotspot) {
+                const action = hotspot.getAttribute('data-action');
+                
+                if (action === 'link') {
+                    let url = hotspot.getAttribute('data-url');
+                    const newTab = hotspot.getAttribute('data-new-tab') === 'true';
+                    
+                    if (url) {
+                        const isAbsolute = /^(?:f|ht)tps?:\\/\\//.test(url);
+                        const isRelative = url.startsWith('/') || url.startsWith('#') || url.startsWith('mailto:') || url.startsWith('tel:');
+                        
+                        if (!isAbsolute && !isRelative) {
+                            if (url.startsWith('www.') || /\\.(com|net|org|io|co|edu|gov|uk|us|ca|de|jp|fr|au|ai|app|dev|biz|info)$/i.test(url)) {
+                                url = 'https://' + url;
+                            }
+                        }
+
+                        if (newTab) window.open(url, '_blank');
+                        else window.location.href = url;
+                    }
+                } else {
+                    const targetId = hotspot.getAttribute('data-target');
+                    if (targetId) navigateTo(targetId);
+                }
+            }
+        });
+
+        if (backBtn) {
+            backBtn.addEventListener('click', function() {
+                if (stackIndex > 0) {
+                    stackIndex--;
+                    navigateTo(stack[stackIndex], true);
+                }
+            });
+            
+            fwdBtn.addEventListener('click', function() {
+                if (stackIndex < stack.length - 1) {
+                    stackIndex++;
+                    navigateTo(stack[stackIndex], true);
+                }
+            });
+            
+            updateButtons();
+        }
+    })();`;
+
+                    // Wrap Script if Lazy Loading is enabled
+                    if (isLazy) {
+                        jsContent = `
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        ${jsContent}
+    });
+<\/script>`;
+                    } else {
+                        jsContent = `
+<script>
+    ${jsContent}
+<\/script>`;
+                    }
+
+                    return `<!-- Interactive Map Component -->\n${css}\n${htmlContent}\n${jsContent}`;
+                }
+
+                const openExportModal = () => {
+                    generatedCode.value = buildHtml(false);
+                    showExport.value = true;
+                    nextTick(() => {
+                        if (codeBlock.value) {
+                            codeBlock.value.textContent = generatedCode.value;
+                            Prism.highlightElement(codeBlock.value);
+                        }
+                    });
+                };
+
+                const openPreviewModal = () => {
+                    showPreview.value = true;
+                };
+
+                const copyCode = () => {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = generatedCode.value;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-9999px";
+                    textArea.style.top = "0";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        copyBtnText.value = 'Copied!';
+                        copyBtnIcon.value = 'ph-check';
+                    } catch (err) {
+                        copyBtnText.value = 'Error';
+                        copyBtnIcon.value = 'ph-warning';
+                    }
+                    document.body.removeChild(textArea);
+                    setTimeout(() => {
+                        copyBtnText.value = 'Copy Code';
+                        copyBtnIcon.value = 'ph-copy';
+                    }, 2000);
+                };
+
+                return {
+                    scenes,
+                    activeSceneId,
+                    activeScene,
+                    isAddingMode,
+                    selectedHotspot,
+                    config,
+                    showExport,
+                    showPreview,
+                    generatedCode,
+                    copyBtnText,
+                    copyBtnIcon,
+                    imageRef,
+                    codeBlock,
+                    previewFrame,
+                    contextPopup,
+                    popupSelect,
+                    groupedScenes,
+                    previewDevice,
+                    isGlobalConfigOpen,
+                    isNavConfigOpen,
+                    handleFileUpload,
+                    onImageLoad,
+                    handleCanvasClick,
+                    selectHotspot,
+                    deleteSelectedHotspot,
+                    removeScene,
+                    getSceneName,
+                    openExportModal,
+                    openPreviewModal,
+                    copyCode,
+                    switchScene,
+                    toggleMode,
+                    confirmContextPopup,
+                    closeContextPopup,
+                    openContextPopup,
+                    getShapeSvg
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>
