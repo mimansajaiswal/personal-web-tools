@@ -143,7 +143,7 @@
             </svg>
             <h1 class="text-lg font-semibold tracking-tight">PDF Stack Designer</h1>
         </div>
-        <div class="flex gap-3">
+        <div class="flex gap-3 flex-wrap items-center justify-end">
             <label for="pdf-upload"
                 class="cursor-pointer btn-accent px-4 py-2 rounded-md text-sm font-medium transition shadow-sm flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
@@ -154,6 +154,15 @@
                 Upload PDF
             </label>
             <input type="file" id="pdf-upload" accept="application/pdf" class="hidden" />
+            <div class="flex gap-2 items-center">
+                <input id="pdf-url-input" type="url" placeholder="https://example.com/file.pdf"
+                    class="w-60 lg:w-72 px-3 py-2 rounded-md border border-earth-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amethyst-300"
+                    aria-label="PDF URL">
+                <button id="load-url-btn"
+                    class="btn-accent px-3 py-2 rounded-md text-sm font-medium transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    Load URL
+                </button>
+            </div>
 
             <button id="download-btn"
                 class="btn-charcoal px-4 py-2 rounded-md text-sm font-medium transition shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -164,6 +173,18 @@
                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 Download PNG
+            </button>
+            <button id="share-config-btn"
+                class="btn-charcoal px-4 py-2 rounded-md text-sm font-medium transition shadow-sm flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="18" cy="5" r="3" />
+                    <circle cx="6" cy="12" r="3" />
+                    <circle cx="18" cy="19" r="3" />
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                </svg>
+                Share Config
             </button>
         </div>
     </header>
@@ -197,22 +218,30 @@
 
                     <!-- Page Count -->
                     <div>
-                        <label class="block text-sm font-medium text-earth-700 mb-1">Page Limit <span id="limit-val"
-                                class="text-earth-400 text-xs ml-1">(5)</span></label>
+                        <div class="flex items-center justify-between mb-1">
+                            <label for="page-limit" class="block text-sm font-medium text-earth-700">Page Limit</label>
+                            <span id="limit-val" class="text-xs text-earth-400 font-semibold">5</span>
+                        </div>
                         <input type="range" id="page-limit" min="1" max="20" value="5"
                             class="w-full h-2 bg-linen-200 rounded-lg appearance-none cursor-pointer accent-amethyst-500">
                     </div>
 
                     <!-- Spacing (Overlap) -->
                     <div>
-                        <label class="block text-sm font-medium text-earth-700 mb-1">Spread Amount</label>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-sm font-medium text-earth-700">Spread Amount</label>
+                            <span id="spacing-value" class="text-xs text-earth-400 font-semibold">100px</span>
+                        </div>
                         <input type="range" id="spacing" min="0" max="300" value="100"
                             class="w-full h-2 bg-linen-200 rounded-lg appearance-none cursor-pointer accent-amethyst-500">
                     </div>
 
                     <!-- Vertical Offset -->
                     <div>
-                        <label class="block text-sm font-medium text-earth-700 mb-1">Vertical Step</label>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-sm font-medium text-earth-700">Vertical Step</label>
+                            <span id="v-step-value" class="text-xs text-earth-400 font-semibold">10px</span>
+                        </div>
                         <input type="range" id="v-step" min="-50" max="50" value="10"
                             class="w-full h-2 bg-linen-200 rounded-lg appearance-none cursor-pointer accent-amethyst-500">
                     </div>
@@ -225,14 +254,20 @@
 
                     <!-- Rotation -->
                     <div>
-                        <label class="block text-sm font-medium text-earth-700 mb-1">Tilt / Rotation</label>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-sm font-medium text-earth-700">Tilt / Rotation</label>
+                            <span id="rotation-value" class="text-xs text-earth-400 font-semibold">-5°</span>
+                        </div>
                         <input type="range" id="rotation" min="-45" max="45" value="-5"
                             class="w-full h-2 bg-linen-200 rounded-lg appearance-none cursor-pointer accent-amethyst-500">
                     </div>
 
                     <!-- Randomness -->
                     <div>
-                        <label class="block text-sm font-medium text-earth-700 mb-1">Messiness (Random Jitter)</label>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-sm font-medium text-earth-700">Messiness (Random Jitter)</label>
+                            <span id="jitter-value" class="text-xs text-earth-400 font-semibold">2</span>
+                        </div>
                         <input type="range" id="jitter" min="0" max="20" value="2"
                             class="w-full h-2 bg-linen-200 rounded-lg appearance-none cursor-pointer accent-amethyst-500">
                     </div>
@@ -269,7 +304,10 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-earth-700 mb-1">Shadow Intensity</label>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-sm font-medium text-earth-700">Shadow Intensity</label>
+                            <span id="shadow-blur-value" class="text-xs text-earth-400 font-semibold">40px</span>
+                        </div>
                         <input type="range" id="shadow-blur" min="0" max="100" value="40"
                             class="w-full h-2 bg-linen-200 rounded-lg appearance-none cursor-pointer accent-amethyst-500">
                     </div>
@@ -320,23 +358,43 @@
     </div>
 
     <script>
+        const DEFAULT_CONFIG = {
+            direction: 'ltr',
+            pageLimit: 5,
+            spacing: 100,
+            vStep: 10,
+            rotation: -5,
+            jitter: 2,
+            marginCrop: 0,
+            shadowEnabled: true,
+            shadowBlur: 40,
+            transparentBg: true,
+            bgColor: '#ffffff'
+        };
+
+        const CONFIG_SCHEMA = {
+            direction: { type: 'enum', options: ['ltr', 'rtl', 'ttb', 'btt'] },
+            pageLimit: { type: 'int', min: 1, max: 20 },
+            spacing: { type: 'int', min: 0, max: 300 },
+            vStep: { type: 'int', min: -50, max: 50 },
+            rotation: { type: 'int', min: -45, max: 45 },
+            jitter: { type: 'int', min: 0, max: 20 },
+            marginCrop: { type: 'int', min: 0, max: 30 },
+            shadowEnabled: { type: 'bool' },
+            shadowBlur: { type: 'int', min: 0, max: 100 },
+            transparentBg: { type: 'bool' },
+            bgColor: { type: 'color' }
+        };
+
+        const STORAGE_KEY = 'pdfStackDesignerConfig';
+        let storageErrorLogged = false;
+        let historyErrorLogged = false;
+
         // --- State Management ---
         const state = {
             pdfDoc: null,
             pageImages: [], // Array of { canvas, width, height }
-            config: {
-                direction: 'ltr',
-                pageLimit: 5,
-                spacing: 100,
-                vStep: 10,
-                rotation: -5,
-                jitter: 2,
-                marginCrop: 0,
-                shadowEnabled: true,
-                shadowBlur: 40,
-                transparentBg: true,
-                bgColor: '#ffffff'
-            },
+            config: { ...DEFAULT_CONFIG },
             renderToken: 0,
             limitDebounce: null
         };
@@ -344,6 +402,9 @@
         // --- DOM Elements ---
         const els = {
             fileInput: document.getElementById('pdf-upload'),
+            pdfUrlInput: document.getElementById('pdf-url-input'),
+            loadUrlBtn: document.getElementById('load-url-btn'),
+            shareBtn: document.getElementById('share-config-btn'),
             canvas: document.getElementById('main-canvas'),
             downloadBtn: document.getElementById('download-btn'),
             status: document.getElementById('status-area'),
@@ -366,28 +427,212 @@
             }
         };
 
+        // --- Config Helpers ---
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
+
+        function sanitizeConfigValue(key, value) {
+            const schema = CONFIG_SCHEMA[key];
+            if (!schema) return null;
+            switch (schema.type) {
+                case 'enum':
+                    return schema.options.includes(value) ? value : null;
+                case 'int': {
+                    const num = parseInt(value, 10);
+                    if (Number.isNaN(num)) return null;
+                    return clamp(num, schema.min, schema.max);
+                }
+                case 'bool':
+                    if (typeof value === 'boolean') return value;
+                    if (typeof value === 'number') return value !== 0;
+                    if (typeof value === 'string') {
+                        const normalized = value.toLowerCase();
+                        if (normalized === 'true' || normalized === '1') return true;
+                        if (normalized === 'false' || normalized === '0') return false;
+                    }
+                    return null;
+                case 'color':
+                    if (typeof value === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value.trim())) {
+                        return value.trim();
+                    }
+                    return null;
+                default:
+                    if (typeof value === 'string') return value;
+                    return null;
+            }
+        }
+
+        function applySourceToConfig(target, source) {
+            if (!source) return target;
+            Object.keys(CONFIG_SCHEMA).forEach((key) => {
+                if (source[key] === undefined) return;
+                const parsed = sanitizeConfigValue(key, source[key]);
+                if (parsed !== null && parsed !== undefined) {
+                    target[key] = parsed;
+                }
+            });
+            return target;
+        }
+
+        function readStoredConfig() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    return JSON.parse(raw);
+                }
+            } catch (err) {
+                if (!storageErrorLogged) {
+                    console.warn('Unable to read stored config', err);
+                    storageErrorLogged = true;
+                }
+            }
+            return null;
+        }
+
+        function loadConfigFromPersistence() {
+            let config = { ...DEFAULT_CONFIG };
+            config = applySourceToConfig(config, readStoredConfig());
+            const params = new URLSearchParams(window.location.search);
+            const queryValues = {};
+            params.forEach((value, key) => {
+                if (CONFIG_SCHEMA[key]) {
+                    queryValues[key] = value;
+                }
+            });
+            config = applySourceToConfig(config, queryValues);
+            return config;
+        }
+
+        function persistConfig(skipHistoryUpdate = false) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config));
+            } catch (err) {
+                if (!storageErrorLogged) {
+                    console.warn('Unable to persist config', err);
+                    storageErrorLogged = true;
+                }
+            }
+            if (!skipHistoryUpdate) {
+                updateUrlQuery();
+            }
+        }
+
+        function updateUrlQuery() {
+            const params = new URLSearchParams();
+            Object.keys(CONFIG_SCHEMA).forEach((key) => {
+                params.set(key, state.config[key]);
+            });
+            const hash = window.location.hash || '';
+            const newUrl = `${window.location.pathname}?${params.toString()}${hash}`;
+            try {
+                window.history.replaceState({}, '', newUrl);
+            } catch (err) {
+                if (!historyErrorLogged) {
+                    console.warn('Unable to update URL', err);
+                    historyErrorLogged = true;
+                }
+            }
+        }
+
+        function applyConfigToInputs() {
+            Object.entries(els.inputs).forEach(([key, input]) => {
+                const value = state.config[key];
+                if (!input) return;
+                if (input.type === 'checkbox') input.checked = Boolean(value);
+                else input.value = value;
+            });
+            document.getElementById('limit-val').innerText = `${state.config.pageLimit}`;
+            document.getElementById('margin-crop-value').innerText = `${state.config.marginCrop}%`;
+            document.getElementById('shadow-toggle-value').innerText = state.config.shadowEnabled ? 'On' : 'Off';
+            document.getElementById('bg-toggle-value').innerText = state.config.transparentBg ? 'Transparent' : 'Solid';
+            document.getElementById('bg-color-wrapper').style.display = state.config.transparentBg ? 'none' : 'block';
+            const spacingLabel = document.getElementById('spacing-value');
+            if (spacingLabel) spacingLabel.innerText = `${state.config.spacing}px`;
+            const vStepLabel = document.getElementById('v-step-value');
+            if (vStepLabel) vStepLabel.innerText = `${state.config.vStep}px`;
+            const rotationLabel = document.getElementById('rotation-value');
+            if (rotationLabel) rotationLabel.innerText = `${state.config.rotation}°`;
+            const jitterLabel = document.getElementById('jitter-value');
+            if (jitterLabel) jitterLabel.innerText = `${state.config.jitter}`;
+            const shadowBlurLabel = document.getElementById('shadow-blur-value');
+            if (shadowBlurLabel) shadowBlurLabel.innerText = `${state.config.shadowBlur}px`;
+        }
+
+        async function shareCurrentConfig() {
+            updateUrlQuery();
+            const shareUrl = window.location.href;
+            const successMessage = 'Share link copied to clipboard.';
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(shareUrl);
+                    els.status.textContent = successMessage;
+                    return;
+                }
+                throw new Error('Clipboard API unavailable');
+            } catch (err) {
+                console.warn('Clipboard copy failed, using fallback', err);
+                const copied = window.prompt('Copy this configuration URL:', shareUrl);
+                if (copied !== null) {
+                    els.status.textContent = successMessage;
+                } else {
+                    els.status.textContent = 'Copy the URL shown to share this configuration.';
+                }
+            }
+        }
+
         // --- Initialization ---
         function init() {
+            state.config = loadConfigFromPersistence();
+            applyConfigToInputs();
+            persistConfig();
+
             // Attach listeners to all inputs
             Object.entries(els.inputs).forEach(([key, el]) => {
                 el.addEventListener('input', (e) => {
+                    let newValue;
                     // Update state
-                    if (el.type === 'checkbox') state.config[key] = el.checked;
-                    else if (key === 'direction' || key === 'bgColor') state.config[key] = el.value;
-                    else state.config[key] = parseInt(el.value);
+                    if (el.type === 'checkbox') newValue = el.checked;
+                    else if (key === 'direction' || key === 'bgColor') newValue = el.value;
+                    else newValue = parseInt(el.value);
+                    state.config[key] = newValue;
 
                     // UI Updates
-                    if (key === 'pageLimit') document.getElementById('limit-val').innerText = `(${el.value})`;
+                    if (key === 'pageLimit') {
+                        document.getElementById('limit-val').innerText = `${newValue}`;
+                    }
                     if (key === 'transparentBg') {
-                        document.getElementById('bg-color-wrapper').style.display = el.checked ? 'none' : 'block';
-                        document.getElementById('bg-toggle-value').innerText = el.checked ? 'Transparent' : 'Solid';
+                        document.getElementById('bg-color-wrapper').style.display = newValue ? 'none' : 'block';
+                        document.getElementById('bg-toggle-value').innerText = newValue ? 'Transparent' : 'Solid';
                     }
                     if (key === 'marginCrop') {
-                        document.getElementById('margin-crop-value').innerText = `${el.value}%`;
+                        document.getElementById('margin-crop-value').innerText = `${newValue}%`;
                     }
                     if (key === 'shadowEnabled') {
-                        document.getElementById('shadow-toggle-value').innerText = el.checked ? 'On' : 'Off';
+                        document.getElementById('shadow-toggle-value').innerText = newValue ? 'On' : 'Off';
                     }
+                    if (key === 'spacing') {
+                        const spacingLabel = document.getElementById('spacing-value');
+                        if (spacingLabel) spacingLabel.innerText = `${newValue}px`;
+                    }
+                    if (key === 'vStep') {
+                        const vStepLabel = document.getElementById('v-step-value');
+                        if (vStepLabel) vStepLabel.innerText = `${newValue}px`;
+                    }
+                    if (key === 'rotation') {
+                        const rotationLabel = document.getElementById('rotation-value');
+                        if (rotationLabel) rotationLabel.innerText = `${newValue}°`;
+                    }
+                    if (key === 'jitter') {
+                        const jitterLabel = document.getElementById('jitter-value');
+                        if (jitterLabel) jitterLabel.innerText = `${newValue}`;
+                    }
+                    if (key === 'shadowBlur') {
+                        const shadowBlurLabel = document.getElementById('shadow-blur-value');
+                        if (shadowBlurLabel) shadowBlurLabel.innerText = `${newValue}px`;
+                    }
+
+                    persistConfig();
 
                     // Redraw if we have images
                     if (state.pageImages.length > 0) {
@@ -403,15 +648,28 @@
                 });
             });
 
-            document.getElementById('margin-crop-value').innerText = `${state.config.marginCrop}%`;
-            document.getElementById('shadow-toggle-value').innerText = state.config.shadowEnabled ? 'On' : 'Off';
-            els.inputs.shadowEnabled.checked = state.config.shadowEnabled;
-            document.getElementById('bg-toggle-value').innerText = state.config.transparentBg ? 'Transparent' : 'Solid';
-            els.inputs.transparentBg.checked = state.config.transparentBg;
-            document.getElementById('bg-color-wrapper').style.display = state.config.transparentBg ? 'none' : 'block';
-
             els.fileInput.addEventListener('change', handleFileUpload);
+            if (els.loadUrlBtn) {
+                els.loadUrlBtn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    handleUrlLoad();
+                });
+            }
+            if (els.pdfUrlInput) {
+                els.pdfUrlInput.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        handleUrlLoad();
+                    }
+                });
+            }
             els.downloadBtn.addEventListener('click', downloadImage);
+            if (els.shareBtn) {
+                els.shareBtn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    shareCurrentConfig();
+                });
+            }
 
             // Window resize listener to adjust canvas display (not content)
             window.addEventListener('resize', () => {
@@ -445,6 +703,48 @@
                 console.error(err);
                 els.status.textContent = "Error: " + err.message;
                 alert("Error loading PDF. Ensure it is not password protected.");
+            }
+        }
+
+        async function handleUrlLoad() {
+            if (!els.pdfUrlInput) return;
+            const rawUrl = els.pdfUrlInput.value.trim();
+            if (!rawUrl) {
+                alert('Please enter a PDF URL to load.');
+                return;
+            }
+
+            let parsedUrl;
+            try {
+                parsedUrl = new URL(rawUrl, window.location.href);
+            } catch (err) {
+                alert('Please enter a valid URL.');
+                return;
+            }
+
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+                alert('Only HTTP(S) links are supported.');
+                return;
+            }
+
+            els.status.textContent = "Loading PDF from URL...";
+            els.placeholder.style.display = 'none';
+            if (els.loadUrlBtn) els.loadUrlBtn.disabled = true;
+
+            try {
+                state.pdfDoc = await pdfjsLib.getDocument({ url: parsedUrl.toString(), withCredentials: false }).promise;
+
+                els.status.textContent = `PDF Loaded (${state.pdfDoc.numPages} pages). Rendering...`;
+                await loadPagesFromDoc();
+
+                els.downloadBtn.disabled = false;
+                els.canvas.classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+                els.status.textContent = "Error: " + err.message;
+                alert("Error loading PDF from URL. Ensure the link is accessible and supports CORS.");
+            } finally {
+                if (els.loadUrlBtn) els.loadUrlBtn.disabled = false;
             }
         }
 
