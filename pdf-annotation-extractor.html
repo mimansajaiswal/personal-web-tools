@@ -490,6 +490,21 @@ annotation 2
 
         // Concurrency Limit for AI calls
         const CONCURRENCY_LIMIT = 3;
+        const USER_PROMPT_STORAGE_KEY = 'pdf-annotation-extractor:user-instructions';
+
+        function initInstructionPersistence() {
+            const promptEl = document.getElementById('userPrompt');
+            if (!promptEl || typeof localStorage === 'undefined') return;
+
+            const cached = localStorage.getItem(USER_PROMPT_STORAGE_KEY);
+            if (cached !== null) {
+                promptEl.value = cached;
+            }
+
+            promptEl.addEventListener('input', () => {
+                localStorage.setItem(USER_PROMPT_STORAGE_KEY, promptEl.value);
+            });
+        }
 
         // --- UI Helpers ---
 
@@ -1289,6 +1304,12 @@ annotation 2
             const data = await response.json();
             console.log("Gemini Response:", data);
             return data.candidates[0].content.parts[0].text;
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initInstructionPersistence);
+        } else {
+            initInstructionPersistence();
         }
 
     </script>
