@@ -131,6 +131,9 @@
             vertical-align: baseline;
             transition: all var(--smm-duration) var(--smm-easing);
             will-change: transform, opacity, color;
+            position: relative;
+            z-index: 10;
+            /* Text above background */
         }
 
         .shiki-magic-move-enter-from,
@@ -149,7 +152,8 @@
             color: transparent;
             background: transparent;
             caret-color: currentColor;
-            z-index: 10;
+            z-index: 20;
+            /* Textarea above text */
             resize: none;
             outline: none;
             white-space: pre !important;
@@ -159,10 +163,30 @@
 
         .syntax-layer {
             pointer-events: none;
-            z-index: 1;
+            z-index: 10;
+            /* Text layer */
             display: block;
             font-family: var(--font-code) !important;
             /* Fix 2: Apply var */
+        }
+
+        .decoration-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 1;
+            /* Backgrounds below text */
+        }
+
+        .line-decoration {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1.5em;
+            /* Matches line-height */
         }
 
         /* Line Numbers */
@@ -182,7 +206,7 @@
             user-select: none;
             opacity: 0.4;
             border-right: 1px solid rgba(128, 128, 128, 0.1);
-            z-index: 20;
+            z-index: 40;
             cursor: pointer;
             overflow: hidden;
         }
@@ -193,7 +217,7 @@
             font-weight: bold;
         }
 
-        .line-numbers div.focused {
+        .line-numbers div.has-decoration {
             color: var(--accent-light);
             opacity: 1;
             font-weight: bold;
@@ -201,8 +225,8 @@
 
         /* Highlights */
         .dimmed {
-            opacity: 0.25;
-            filter: blur(0.8px);
+            opacity: 0.7;
+            filter: blur(2px);
             transition: all 0.4s ease;
         }
 
@@ -214,6 +238,8 @@
             overflow: auto;
             height: 100%;
             color: inherit;
+            z-index: 10;
+            position: relative;
         }
 
         .markdown-preview h1 {
@@ -352,6 +378,33 @@
             dawn: { name: 'Dawn (Light)', shikiTheme: 'vitesse-light', bg: '#ffffff', text: '#393a34', chrome: '#f4f4f5' },
             solarized: { name: 'Solarized (Light)', shikiTheme: 'solarized-light', bg: '#fdf6e3', text: '#657b83', chrome: '#eee8d5' },
             midnight: { name: 'Midnight (Blue)', shikiTheme: 'rose-pine-moon', bg: '#232136', text: '#e0def4', chrome: '#2a273f' }
+        };
+
+        const COLORS = [
+            '#22c55e', // Green
+            '#3b82f6', // Blue
+            '#a855f7', // Purple
+            '#eab308', // Yellow
+            '#ef4444', // Red
+            'rgba(128,128,128,0.2)' // Gray
+        ];
+
+        const FRAME_DIMENSIONS = {
+            small: {
+                square: { width: 400, height: 400 },
+                horizontal: { width: 480, height: 320 },
+                vertical: { width: 320, height: 568 }
+            },
+            medium: {
+                square: { width: 550, height: 550 },
+                horizontal: { width: 640, height: 400 },
+                vertical: { width: 375, height: 667 }
+            },
+            large: {
+                square: { width: 700, height: 700 },
+                horizontal: { width: 800, height: 500 },
+                vertical: { width: 430, height: 850 }
+            }
         };
 
         // --- ICONS ---
@@ -594,7 +647,7 @@
         };
 
         // --- TOKENIZER ---
-        const processCodeToTokens = async (code, language, theme, focusedLines = []) => {
+        const processCodeToTokens = async (code, language, theme, decorations = {}) => {
             if (!window.shikiHighlighter) return { tokens: [] };
             code = code.replace(/\r\n/g, '\n');
 
@@ -603,29 +656,24 @@
             const flattened = [];
             let offset = 0;
 
+            let lineIdx = 1;
             tokens.forEach(line => {
                 line.forEach(token => {
+                    const decoration = decorations[lineIdx];
+                    const className = decoration && decoration.blur ? 'token dimmed' : 'token';
+
                     flattened.push({
                         content: token.content,
                         color: token.color,
-                        htmlClass: 'token',
+                        htmlClass: className,
                         offset: offset
                     });
                     offset += token.content.length;
                 });
                 flattened.push({ content: '\n', htmlClass: 'break', offset: offset });
                 offset += 1;
+                lineIdx++;
             });
-
-            if (focusedLines && focusedLines.length > 0) {
-                let lineIdx = 1;
-                flattened.forEach(t => {
-                    if (t.content === '\n') lineIdx++;
-                    else if (!focusedLines.includes(lineIdx)) {
-                        t.htmlClass += ' dimmed';
-                    }
-                });
-            }
 
             const counts = {};
             return {
@@ -655,32 +703,53 @@
             return { tokens: currTokens };
         };
 
+        // --- DECORATION LAYER ---
+        const DecorationLayer = ({ code, decorations }) => {
+            if (!decorations || Object.keys(decorations).length === 0) return null;
+            const lineCount = code.split('\n').length;
+            const els = [];
+            for (let i = 0; i < lineCount; i++) {
+                const dec = decorations[i + 1];
+                if (dec && dec.color) {
+                    els.push(
+                        <div key={`bg-${i}`} className="line-decoration" style={{ top: `${32 + (i * 15 * 1.5)}px`, backgroundColor: dec.color, opacity: 0.2 }} />
+                    );
+                }
+            }
+            return <div className="decoration-layer">{els}</div>;
+        };
+
         // --- EDITOR COMPONENTS ---
-        // Fix 1: Use useMemo for synchronous rendering of HTML
-        const SimpleHighlighter = ({ code, language, theme, focusedLines = [], shikiReady }) => {
+        const SimpleHighlighter = ({ code, language, theme, decorations, shikiReady }) => {
             const html = useMemo(() => {
                 if (!window.shikiHighlighter) return code.replace(/</g, '&lt;');
                 try {
                     const h = window.shikiHighlighter.codeToHtml(code, { lang: language, theme: theme });
-                    // Apply dimming logic directly to generated HTML string or DOM nodes
-                    // Since Shiki returns a string, we parse it to apply classes
-                    if (focusedLines.length > 0) {
+
+                    // Manually apply dimmed class for blur effect
+                    if (decorations && Object.keys(decorations).length > 0) {
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(h, 'text/html');
                         const lines = doc.querySelectorAll('.line');
                         lines.forEach((line, idx) => {
-                            if (!focusedLines.includes(idx + 1)) line.classList.add('dimmed');
+                            if (decorations[idx + 1]?.blur) {
+                                // Apply to child spans because shiki applies color to spans
+                                const spans = line.querySelectorAll('span');
+                                spans.forEach(s => s.classList.add('dimmed'));
+                                // Also add to line itself just in case
+                                line.classList.add('dimmed');
+                            }
                         });
                         return doc.body.innerHTML;
                     }
                     return h;
                 } catch (e) { return code; }
-            }, [code, language, theme, focusedLines, shikiReady]);
+            }, [code, language, theme, decorations, shikiReady]);
 
             return <div className="code-area-shared syntax-layer" dangerouslySetInnerHTML={{ __html: html }} />;
         };
 
-        const MagicMove = ({ code, language, theme, focusedLines, prevCodeRef, prevTokensRef, shikiReady }) => {
+        const MagicMove = ({ code, language, theme, decorations, prevCodeRef, prevTokensRef, shikiReady }) => {
             const containerRef = useRef(null);
             const rendererRef = useRef(null);
 
@@ -692,7 +761,7 @@
 
             useEffect(() => {
                 if (rendererRef.current && window.shikiHighlighter) {
-                    processCodeToTokens(code, language, theme, focusedLines).then(rawStep => {
+                    processCodeToTokens(code, language, theme, decorations).then(rawStep => {
                         let finalStep = rawStep;
                         if (prevCodeRef.current && prevTokensRef.current) {
                             finalStep = syncTokens(prevTokensRef.current, rawStep.tokens, prevCodeRef.current, code);
@@ -702,7 +771,7 @@
                         prevTokensRef.current = finalStep.tokens;
                     });
                 }
-            }, [code, language, theme, focusedLines, shikiReady]);
+            }, [code, language, theme, decorations, shikiReady]);
 
             return <div ref={containerRef} className="code-area-shared syntax-layer overflow-hidden" />;
         };
@@ -713,11 +782,11 @@
 
         // --- SLIDE DATA ---
         const INITIAL_SLIDES = [
-            { id: generateId(), title: 'README.md', language: 'markdown', focusedLines: [], code: `# CodePresenter\n\nTransform your code into **cinematic animations**.\n\n- 🪄 Magic Move Transitions\n- 🎨 Rich Syntax Highlighting\n- 🎥 Video & HTML Export\n- ⚡ Zero Dependencies` },
-            { id: generateId(), title: 'transformer.py', language: 'python', focusedLines: [], code: `import torch\nimport torch.nn as nn\n\nclass Transformer(nn.Module):\n    def __init__(self, dim, depth):\n        super().__init__()\n        self.layers = nn.ModuleList([])\n\n    def forward(self, x):\n        return x` },
-            { id: generateId(), title: 'transformer.py', language: 'python', focusedLines: [], code: `import torch\nimport torch.nn as nn\n\nclass Transformer(nn.Module):\n    def __init__(self, dim, depth, heads):\n        super().__init__()\n        self.layers = nn.ModuleList([\n            Attention(dim, heads)\n            for _ in range(depth)\n        ])\n\n    def forward(self, x):\n        for attn in self.layers:\n            x = attn(x)\n        return x` },
-            { id: generateId(), title: 'transformer.py', language: 'python', focusedLines: [], code: `import torch\nimport torch.nn as nn\n\nclass Transformer(nn.Module):\n    def __init__(self, dim, depth, heads, mlp_dim):\n        super().__init__()\n        self.layers = nn.ModuleList([\n            nn.ModuleList([\n                Attention(dim, heads),\n                FeedForward(dim, mlp_dim)\n            ])\n            for _ in range(depth)\n        ])\n\n    def forward(self, x):\n        for attn, ff in self.layers:\n            x = attn(x) + x\n            x = ff(x) + x\n        return x` },
-            { id: generateId(), title: 'transformer.py', language: 'python', focusedLines: [16], code: `import torch\nimport torch.nn as nn\n\nclass Transformer(nn.Module):\n    def __init__(self, dim, depth, heads, mlp_dim):\n        super().__init__()\n        self.layers = nn.ModuleList([\n            nn.ModuleList([\n                Attention(dim, heads),\n                FeedForward(dim, mlp_dim)\n            ])\n            for _ in range(depth)\n        ])\n        self.norm = nn.LayerNorm(dim)\n\n    def forward(self, x):\n        for attn, ff in self.layers:\n            x = attn(x) + x\n            x = ff(x) + x\n        return self.norm(x)` }
+            { id: generateId(), title: 'README.md', language: 'markdown', decorations: {}, code: `# CodePresenter\n\nTransform your code into **cinematic animations**.\n\n- 🪄 Magic Move Transitions\n- 🎨 Rich Syntax Highlighting\n- 🎥 Video & HTML Export\n- ⚡ Zero Dependencies` },
+            { id: generateId(), title: 'transformer.py', language: 'python', decorations: {}, code: `import torch\nimport torch.nn as nn\n\nclass Transformer(nn.Module):\n    def __init__(self, dim, depth):\n        super().__init__()\n        self.layers = nn.ModuleList([])\n\n    def forward(self, x):\n        return x` },
+            { id: generateId(), title: 'transformer.py', language: 'python', decorations: {}, code: `import torch\nimport torch.nn as nn\n\nclass Transformer(nn.Module):\n    def __init__(self, dim, depth, heads):\n        super().__init__()\n        self.layers = nn.ModuleList([\n            Attention(dim, heads)\n            for _ in range(depth)\n        ])\n\n    def forward(self, x):\n        for attn in self.layers:\n            x = attn(x)\n        return x` },
+            { id: generateId(), title: 'transformer.py', language: 'python', decorations: {}, code: `import torch\nimport torch.nn as nn\n\nclass Transformer(nn.Module):\n    def __init__(self, dim, depth, heads, mlp_dim):\n        super().__init__()\n        self.layers = nn.ModuleList([\n            nn.ModuleList([\n                Attention(dim, heads),\n                FeedForward(dim, mlp_dim)\n            ])\n            for _ in range(depth)\n        ])\n\n    def forward(self, x):\n        for attn, ff in self.layers:\n            x = attn(x) + x\n            x = ff(x) + x\n        return x` },
+            { id: generateId(), title: 'transformer.py', language: 'python', decorations: { 16: { color: '#a855f7' } }, code: `import torch\nimport torch.nn as nn\n\nclass Transformer(nn.Module):\n    def __init__(self, dim, depth, heads, mlp_dim):\n        super().__init__()\n        self.layers = nn.ModuleList([\n            nn.ModuleList([\n                Attention(dim, heads),\n                FeedForward(dim, mlp_dim)\n            ])\n            for _ in range(depth)\n        ])\n        self.norm = nn.LayerNorm(dim)\n\n    def forward(self, x):\n        for attn, ff in self.layers:\n            x = attn(x) + x\n            x = ff(x) + x\n        return self.norm(x)` }
         ];
 
         const Toggle = ({ label, checked, onChange }) => (
@@ -736,12 +805,19 @@
             const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
             const [isPlaying, setIsPlaying] = useState(false);
             const [frameSize, setFrameSize] = useState({ width: 800, height: 500 });
+
+            // Size Presets State
+            const [activeSize, setActiveSize] = useState('large');
+            const [activeShape, setActiveShape] = useState('horizontal');
+
             const [currentThemeKey, setCurrentThemeKey] = useState('carbon');
             const [toastMessage, setToastMessage] = useState(null);
             const [exportModalOpen, setExportModalOpen] = useState(false);
             const [settingsOpen, setSettingsOpen] = useState(false);
             const [animatingKey, setAnimatingKey] = useState(null);
             const [shikiReady, setShikiReady] = useState(false);
+
+            const [activePopup, setActivePopup] = useState(null); // { line, x, y }
 
             // States for UI Settings
             const [settings, setSettings] = useState({ showLineNumbers: true, showCopyButton: true, showFrame: true, fontFamily: DEFAULT_FONT });
@@ -756,6 +832,7 @@
             const frameRef = useRef(null);
             const prevCodeRef = useRef(null);
             const prevTokensRef = useRef(null);
+            const popupRef = useRef(null);
 
             const isResizing = useRef(false);
             const resizeStartPos = useRef({ x: 0, y: 0 });
@@ -763,6 +840,17 @@
 
             const currentSlide = slides[currentSlideIndex];
             const currentTheme = THEMES[currentThemeKey];
+
+            // Click outside handler for popup
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (popupRef.current && !popupRef.current.contains(event.target) && !event.target.closest('.line-numbers')) {
+                        setActivePopup(null);
+                    }
+                };
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => document.removeEventListener("mousedown", handleClickOutside);
+            }, []);
 
             // Load Font Effect (debounced)
             useEffect(() => {
@@ -847,7 +935,18 @@
                         const decompressed = LZString.decompressFromEncodedURIComponent(hash);
                         if (decompressed) {
                             const data = JSON.parse(decompressed);
-                            if (data && data.length > 0) setSlides(data);
+                            if (data && data.length > 0) {
+                                // Migration: convert old focusedLines to decorations if needed
+                                const migrated = data.map(s => {
+                                    if (s.focusedLines && !s.decorations) {
+                                        const decs = {};
+                                        s.focusedLines.forEach(l => decs[l] = { color: 'rgba(128,128,128,0.2)' }); // Default
+                                        return { ...s, decorations: decs };
+                                    }
+                                    return s;
+                                });
+                                setSlides(migrated);
+                            }
                         }
                     } catch (e) { }
                 } else {
@@ -862,6 +961,10 @@
                 e.preventDefault();
                 e.stopPropagation();
                 isResizing.current = true;
+                // Clear presets on manual resize
+                setActiveSize(null);
+                setActiveShape(null);
+
                 resizeStartPos.current = { x: e.clientX, y: e.clientY };
                 resizeStartSize.current = { ...frameSize };
                 document.addEventListener('mousemove', handleResizeMove);
@@ -869,7 +972,7 @@
             };
             const handleResizeMove = (e) => {
                 if (!isResizing.current) return;
-                setFrameSize({ width: Math.max(400, resizeStartSize.current.width + (e.clientX - resizeStartPos.current.x)), height: Math.max(200, resizeStartSize.current.height + (e.clientY - resizeStartPos.current.y)) });
+                setFrameSize({ width: Math.max(200, resizeStartSize.current.width + (e.clientX - resizeStartPos.current.x)), height: Math.max(200, resizeStartSize.current.height + (e.clientY - resizeStartPos.current.y)) });
             };
             const handleResizeEnd = () => {
                 isResizing.current = false;
@@ -887,6 +990,7 @@
                     setAnimatingKey(null);
                 }
                 setCurrentSlideIndex(idx);
+                setActivePopup(null);
             };
 
             const updateSlide = (key, val) => {
@@ -895,9 +999,33 @@
                 setSlides(n);
             };
 
-            const toggleFocus = (lineNum) => {
-                const lines = currentSlide.focusedLines || [];
-                updateSlide('focusedLines', lines.includes(lineNum) ? lines.filter(l => l !== lineNum) : [...lines, lineNum]);
+            const onLineClick = (e, lineNum) => {
+                const rect = e.target.getBoundingClientRect();
+                setActivePopup({ line: lineNum, x: rect.right + 10, y: rect.top });
+            };
+
+            const applyDecoration = (type, value) => {
+                if (!activePopup) return;
+                const { line } = activePopup;
+                const currentDecs = currentSlide.decorations || {};
+                const lineDec = currentDecs[line] || {};
+
+                if (type === 'remove') {
+                    const newDecs = { ...currentDecs };
+                    delete newDecs[line];
+                    updateSlide('decorations', newDecs);
+                } else {
+                    const newDecs = { ...currentDecs, [line]: { ...lineDec, [type]: value } };
+                    updateSlide('decorations', newDecs);
+                }
+            };
+
+            const setPreset = (size, shape) => {
+                const s = size || activeSize || 'medium';
+                const sh = shape || activeShape || 'horizontal';
+                setActiveSize(s);
+                setActiveShape(sh);
+                setFrameSize(FRAME_DIMENSIONS[s][sh]);
             };
 
             const copyText = (text) => {
@@ -922,7 +1050,7 @@
 
             const addSlide = () => {
                 const n = [...slides];
-                n.splice(currentSlideIndex + 1, 0, { ...currentSlide, id: generateId(), focusedLines: [] });
+                n.splice(currentSlideIndex + 1, 0, { ...currentSlide, id: generateId(), decorations: {} });
                 setSlides(n);
                 changeSlide(currentSlideIndex + 1);
             };
@@ -932,7 +1060,7 @@
                 n.splice(currentSlideIndex + 1, 0, {
                     ...currentSlide,
                     id: generateId(),
-                    focusedLines: [...(currentSlide.focusedLines || [])]
+                    decorations: { ...currentSlide.decorations }
                 });
                 setSlides(n);
                 changeSlide(currentSlideIndex + 1);
@@ -945,7 +1073,7 @@
                     title: 'Untitled',
                     language: currentSlide.language,
                     code: '',
-                    focusedLines: []
+                    decorations: {}
                 });
                 setSlides(n);
                 changeSlide(currentSlideIndex + 1);
@@ -985,31 +1113,24 @@
                     [id="${id}"] .ln { padding-top:32px;text-align:right;width:40px;opacity:0.4;user-select:none;border-right:1px solid rgba(128,128,128,0.1);display:${settings.showLineNumbers ? 'block' : 'none'};font-size:15px;line-height:1.5;font-family:'${safeFont}',monospace; }
                     [id="${id}"] .c-wrap { flex:1;position:relative; }
                     [id="${id}"] .shiki-magic-move-container { font-size:15px;line-height:1.5;white-space:pre;padding:32px;padding-bottom:32px;width:100%;height:100%;display:block;overflow:auto;font-family:'${safeFont}',monospace; }
-                    [id="${id}"] .shiki-magic-move-item { display:inline-block;vertical-align:baseline;transition:all 500ms ease-in-out; }
+                    [id="${id}"] .shiki-magic-move-item { display:inline-block;vertical-align:baseline;transition:all 500ms ease-in-out;position:relative;z-index:10; }
                     [id="${id}"] .shiki-magic-move-enter-from, [id="${id}"] .shiki-magic-move-leave-to { opacity:0;transform:scale(0.9); }
                     [id="${id}"] .shiki-magic-move-leave-active { position:absolute;pointer-events:none; }
-                    [id="${id}"] .dimmed { opacity:0.25;filter:blur(0.5px);transition:all 0.4s; }
-                    [id="${id}"] .md-view { padding:32px;height:100%;overflow:auto;color:${currentTheme.text};font-family:'Inter',sans-serif;line-height:1.5; }
-                    [id="${id}"] .md-view h1,
-                    [id="${id}"] .md-view h2,
-                    [id="${id}"] .md-view h3,
-                    [id="${id}"] .md-view h4,
-                    [id="${id}"] .md-view h5,
-                    [id="${id}"] .md-view h6,
-                    [id="${id}"] .md-view p,
-                    [id="${id}"] .md-view ul,
-                    [id="${id}"] .md-view ol,
-                    [id="${id}"] .md-view li {
-                        margin: 0;
-                        line-height: 1.5;
-                    }
-                    [id="${id}"] .md-view h1 { font-size:2em;font-weight:700; }
-                    [id="${id}"] .md-view ul,[id="${id}"] .md-view ol { padding-left:1.5rem; }
-                    [id="${id}"] .md-view li { list-style-position:outside; line-height:0; }
+                    [id="${id}"] .decoration-layer { position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:1; }
+                    [id="${id}"] .line-decoration { position:absolute;left:0;right:0;height:1.5em; }
+                    [id="${id}"] .dimmed { opacity:0.7;filter:blur(2px);transition:all 0.4s ease; }
+                    [id="${id}"] .md-view { padding:0;line-height:0;height:100%;overflow:auto;color:${currentTheme.text};font-family:'Inter',sans-serif;position:relative;z-index:10; }
+                    [id="${id}"] .md-view h1 { font-size:2em;font-weight:700;margin-bottom:0.5em;line-height:1.5;padding:0 32px;padding-top:32px; }
+                    [id="${id}"] .md-view h2 { font-size:1.5em;font-weight:600;margin-bottom:0.5em;line-height:1.5;padding:0 32px; }
+                    [id="${id}"] .md-view h3 { font-size:1.25em;font-weight:600;margin-bottom:0.5em;line-height:1.5;padding:0 32px; }
+                    [id="${id}"] .md-view h4, [id="${id}"] .md-view h5, [id="${id}"] .md-view h6 { line-height:1.5;padding:0 32px; }
+                    [id="${id}"] .md-view p { margin-bottom:1em;line-height:2;padding:0 32px; }
+                    [id="${id}"] .md-view ul, [id="${id}"] .md-view ol { padding-left:calc(1.5rem + 32px);padding-right:32px;margin:0 0 1em 0;line-height:1.5; }
+                    [id="${id}"] .md-view li { margin-bottom:0.6em;line-height:2;list-style-position:outside; }
                     [id="${id}"] .md-view code { background:rgba(128,128,128,0.2);padding:2px 4px;border-radius:4px;font-family:'${safeFont}',monospace;font-size:0.9em; }
                     [id="${id}"] .copy-btn { margin-left:auto;background:none;border:none;color:${currentTheme.text};opacity:0.5;cursor:pointer;display:${settings.showCopyButton ? 'block' : 'none'}; }
                     [id="${id}"] .copy-btn-float { position:absolute;top:10px;right:10px;z-index:50;background:${currentTheme.chrome};border-radius:4px;padding:4px;opacity:0.6;color:${currentTheme.text};border:1px solid rgba(128,128,128,0.2);cursor:pointer;display:${settings.showCopyButton && !settings.showFrame ? 'block' : 'none'}; }
-                    [id="${id}"] .nav { position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:rgba(15,15,15,0.25);backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,0.08); }
+                    [id="${id}"] .nav { position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:rgba(15,15,15,0.25);backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,0.08);z-index:100; }
                     [id="${id}"] .nav button { background:rgba(255,255,255,0.15);border:none;color:${currentTheme.text};cursor:pointer;padding:6px 14px;border-radius:9999px;font-size:11px;font-weight:600;letter-spacing:0.02em;display:flex;align-items:center;gap:6px;transition:background 0.2s, transform 0.2s; }
                     [id="${id}"] .nav button:hover { background:rgba(255,255,255,0.25);transform:translateY(-1px); }
                     [id="${id}"] .nav-count { font-size:11px;font-weight:600;color:${currentTheme.text};text-transform:uppercase;letter-spacing:0.1em;opacity:0.8; }
@@ -1118,28 +1239,41 @@ const runComponent = async () => {
         if (markedLib.marked && typeof markedLib.marked.parse === 'function') return markedLib.marked.parse(text);
         return text;
     };
+    
+    const renderDecorations = (decorations, code) => {
+         if(!decorations) return '';
+         const lines = code.split('\\n').length;
+         let bgHtml = '<div class="decoration-layer">';
+         
+         for(let i=0; i<lines; i++) {
+             const dec = decorations[i+1];
+             if(dec && dec.color) {
+                 bgHtml += \`<div class="line-decoration" style="top:\${32 + (i * 15 * 1.5)}px;background-color:\${dec.color};opacity:0.2"></div>\`;
+             }
+         }
+         bgHtml += '</div>';
+         return bgHtml;
+    };
 
-    const tokenize = (code, language, focus = []) => {
+    const tokenize = (code, language) => {
         const source = typeof code === 'string' ? code : '';
         const lang = language || 'javascript';
         const { tokens } = highlighter.codeToTokens(source, { lang, theme: themeKey });
         let flat = [];
         let offset = 0;
+        
+        let lineIdx = 1;
         tokens.forEach(line => {
+            const dec = (slides[index].decorations || {})[lineIdx];
+            const htmlClass = dec && dec.blur ? 'token dimmed' : 'token';
             line.forEach(token => {
-                flat.push({ content: token.content, color: token.color, htmlClass: 'token', offset });
+                flat.push({ content: token.content, color: token.color, htmlClass, offset });
                 offset += token.content.length;
             });
             flat.push({ content: '\\n', htmlClass: 'break', offset });
             offset += 1;
+            lineIdx++;
         });
-        if (focus.length) {
-            let lineIdx = 1;
-            flat.forEach(token => {
-                if (token.content === '\\n') lineIdx++;
-                else if (!focus.includes(lineIdx)) token.htmlClass += ' dimmed';
-            });
-        }
         const counts = {};
         return flat.map((token, idx) => {
             const keyBase = token.content.trim();
@@ -1182,7 +1316,7 @@ const runComponent = async () => {
 
     const updateLineNumbers = (slide) => {
         if (!elements.lines) return;
-        const focus = slide.focusedLines || [];
+        const decorations = slide.decorations || {};
         const text = typeof slide.code === 'string' ? slide.code : '';
         if (slide.language === 'markdown') {
             elements.lines.style.display = 'none';
@@ -1191,7 +1325,8 @@ const runComponent = async () => {
         }
         elements.lines.style.display = 'block';
         elements.lines.innerHTML = text.split('\\n').map((_, idx) => {
-            const cls = focus.includes(idx + 1) ? 'focused' : '';
+            const dec = decorations[idx + 1];
+            const cls = dec ? 'has-decoration' : '';
             return '<div class="' + cls + '">' + (idx + 1) + '</div>';
         }).join('');
     };
@@ -1209,11 +1344,20 @@ const runComponent = async () => {
     const renderCode = (slide) => {
         if (!elements.code) return;
         const source = typeof slide.code === 'string' ? slide.code : '';
-        let tokens = tokenize(source, slide.language, slide.focusedLines || []);
+        let tokens = tokenize(source, slide.language);
         if (previousTokens && previousCode) {
             tokens = syncTokenKeys(previousTokens, tokens, previousCode, source);
         }
+        
+        const decs = renderDecorations(slide.decorations, source);
+        
         renderer.render({ tokens });
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = decs;
+        const bgLayer = tempDiv.querySelector('.decoration-layer');
+        if (bgLayer) elements.code.prepend(bgLayer);
+
         previousTokens = tokens;
         previousCode = source;
     };
@@ -1294,6 +1438,30 @@ runComponent();
                 <div className="flex h-screen w-screen overflow-hidden text-sm" style={{ color: currentTheme.text }}>
                     {toastMessage && <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[300] bg-gray-900 text-white px-4 py-2 rounded-full shadow-lg animate-in fade-in slide-in-from-top-2">{toastMessage}</div>}
 
+                    {activePopup && (
+                        <div ref={popupRef} className="fixed z-[100] bg-white rounded-lg shadow-xl border border-gray-200 p-2 flex flex-col gap-2 w-48" style={{ left: activePopup.x, top: activePopup.y }}>
+                            <div className="text-xs font-bold text-gray-500 px-1">Line {activePopup.line}</div>
+                            <div className="flex items-center justify-between gap-2">
+                                <button onClick={() => applyDecoration('blur', !((currentSlide.decorations || {})[activePopup.line] || {}).blur)} className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-xs font-medium transition-colors ${((currentSlide.decorations || {})[activePopup.line] || {}).blur ? 'bg-gray-800 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>
+                                    <Icon name="EyeOff" size={12} /> Blur
+                                </button>
+                                <button onClick={() => applyDecoration('remove', null)} className="p-1.5 text-red-500 hover:bg-red-50 rounded" title="Clear All">
+                                    <Icon name="Trash2" size={12} />
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-6 gap-1">
+                                {COLORS.map(c => (
+                                    <button
+                                        key={c}
+                                        onClick={() => applyDecoration('color', c)}
+                                        className="w-6 h-6 rounded-full border border-gray-200 hover:scale-110 transition-transform"
+                                        style={{ backgroundColor: c, boxShadow: ((currentSlide.decorations || {})[activePopup.line] || {}).color === c ? '0 0 0 2px white, 0 0 0 4px #7c3aed' : 'none' }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {exportModalOpen && (
                         <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
                             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 space-y-4 text-gray-900">
@@ -1304,6 +1472,7 @@ runComponent();
                                     <button onClick={() => {
                                         const t = document.createElement("textarea");
                                         t.value = generateComponent();
+                                        t.style.position = "fixed"; t.style.left = "-9999px";
                                         document.body.appendChild(t); t.select();
                                         document.execCommand('copy'); document.body.removeChild(t);
                                         setExportCopyState('copied'); setTimeout(() => setExportCopyState('idle'), 2000);
@@ -1324,6 +1493,40 @@ runComponent();
                                     <Toggle label="Show Line Numbers" checked={settings.showLineNumbers} onChange={(v) => setSettings({ ...settings, showLineNumbers: v })} />
                                     <Toggle label="Show Copy Button" checked={settings.showCopyButton} onChange={(v) => setSettings({ ...settings, showCopyButton: v })} />
                                     <Toggle label="Show Window Frame" checked={settings.showFrame} onChange={(v) => setSettings({ ...settings, showFrame: v })} />
+
+                                    <div className="flex flex-col gap-2 py-2 border-t border-gray-200 mt-2 pt-2">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-xs text-gray-500 font-medium">Frame Size</label>
+                                            <span className="text-[10px] text-gray-400 font-mono">{Math.round(frameSize.width)} x {Math.round(frameSize.height)}</span>
+                                        </div>
+
+                                        {/* Shape Selectors */}
+                                        <div className="flex bg-gray-100 p-0.5 rounded-md">
+                                            <button onClick={() => setPreset(null, 'horizontal')} className={`flex-1 py-1 text-[10px] font-medium rounded flex items-center justify-center gap-1 ${activeShape === 'horizontal' ? 'bg-white shadow-sm text-[#7c3aed]' : 'text-gray-500 hover:text-gray-700'}`}>
+                                                <Icon name="RectangleHorizontal" size={14} /> Landscape
+                                            </button>
+                                            <button onClick={() => setPreset(null, 'vertical')} className={`flex-1 py-1 text-[10px] font-medium rounded flex items-center justify-center gap-1 ${activeShape === 'vertical' ? 'bg-white shadow-sm text-[#7c3aed]' : 'text-gray-500 hover:text-gray-700'}`}>
+                                                <Icon name="RectangleVertical" size={14} /> Portrait
+                                            </button>
+                                            <button onClick={() => setPreset(null, 'square')} className={`flex-1 py-1 text-[10px] font-medium rounded flex items-center justify-center gap-1 ${activeShape === 'square' ? 'bg-white shadow-sm text-[#7c3aed]' : 'text-gray-500 hover:text-gray-700'}`}>
+                                                <Icon name="Square" size={14} /> Square
+                                            </button>
+                                        </div>
+
+                                        {/* Size Selectors */}
+                                        <div className="flex bg-gray-100 p-0.5 rounded-md">
+                                            <button onClick={() => setPreset('small', null)} className={`flex-1 py-1 text-[10px] font-medium rounded flex items-center justify-center ${activeSize === 'small' ? 'bg-white shadow-sm text-[#7c3aed]' : 'text-gray-500 hover:text-gray-700'}`}>
+                                                Small
+                                            </button>
+                                            <button onClick={() => setPreset('medium', null)} className={`flex-1 py-1 text-[10px] font-medium rounded flex items-center justify-center ${activeSize === 'medium' ? 'bg-white shadow-sm text-[#7c3aed]' : 'text-gray-500 hover:text-gray-700'}`}>
+                                                Medium
+                                            </button>
+                                            <button onClick={() => setPreset('large', null)} className={`flex-1 py-1 text-[10px] font-medium rounded flex items-center justify-center ${activeSize === 'large' ? 'bg-white shadow-sm text-[#7c3aed]' : 'text-gray-500 hover:text-gray-700'}`}>
+                                                Large
+                                            </button>
+                                        </div>
+                                    </div>
+
                                     <div className="flex flex-col gap-1 py-2">
                                         <label className="text-xs text-gray-500 font-medium">Font Family (Google Fonts)</label>
                                         <input className="w-full bg-white border border-gray-200 rounded px-2 py-1 text-xs font-mono text-gray-900" value={settings.fontFamily} onChange={(e) => setSettings({ ...settings, fontFamily: e.target.value })} placeholder="e.g. Fira Code" />
@@ -1394,7 +1597,7 @@ runComponent();
                                 {effectiveShowLines && (
                                     <div ref={lineNumbersRef} className="line-numbers custom-scroll" style={{ background: currentTheme.bg }} onClick={(e) => e.stopPropagation()}>
                                         {currentSlide.code.split('\n').map((_, i) => (
-                                            <div key={i} onClick={(e) => { e.stopPropagation(); toggleFocus(i + 1); }} className={(currentSlide.focusedLines || []).includes(i + 1) ? 'focused' : ''}>{i + 1}</div>
+                                            <div key={i} onClick={(e) => { e.stopPropagation(); onLineClick(e, i + 1); }} className={(currentSlide.decorations || {})[i + 1] ? 'has-decoration' : ''}>{i + 1}</div>
                                         ))}
                                     </div>
                                 )}
@@ -1404,9 +1607,10 @@ runComponent();
                                     ) : (
                                         <>
                                             <div className="absolute inset-0 z-0 pointer-events-none">
+                                                <DecorationLayer code={currentSlide.code} decorations={currentSlide.decorations} />
                                                 {showMagicMove ?
-                                                    <MagicMove code={currentSlide.code} language={currentSlide.language} theme={currentTheme.shikiTheme} focusedLines={currentSlide.focusedLines || []} prevCodeRef={prevCodeRef} prevTokensRef={prevTokensRef} shikiReady={shikiReady} />
-                                                    : <SimpleHighlighter code={currentSlide.code} language={currentSlide.language} theme={currentTheme.shikiTheme} focusedLines={currentSlide.focusedLines || []} shikiReady={shikiReady} />
+                                                    <MagicMove code={currentSlide.code} language={currentSlide.language} theme={currentTheme.shikiTheme} decorations={currentSlide.decorations} prevCodeRef={prevCodeRef} prevTokensRef={prevTokensRef} shikiReady={shikiReady} />
+                                                    : <SimpleHighlighter code={currentSlide.code} language={currentSlide.language} theme={currentTheme.shikiTheme} decorations={currentSlide.decorations} shikiReady={shikiReady} />
                                                 }
                                             </div>
                                             {isEditor && (
@@ -1417,8 +1621,20 @@ runComponent();
                                                     value={currentSlide.code}
                                                     onChange={(e) => updateSlide('code', e.target.value)}
                                                     onScroll={(e) => {
-                                                        const v = e.target.previousSibling.firstChild || e.target.previousSibling;
-                                                        if (v) { v.scrollTop = e.target.scrollTop; v.scrollLeft = e.target.scrollLeft; }
+                                                        // Fix scroll sync for layers
+                                                        const wrapper = e.target.previousSibling;
+                                                        if (wrapper) {
+                                                            const scrollTop = e.target.scrollTop;
+                                                            const scrollLeft = e.target.scrollLeft;
+                                                            Array.from(wrapper.children).forEach(child => {
+                                                                if (child.classList.contains('syntax-layer')) {
+                                                                    child.scrollTop = scrollTop;
+                                                                    child.scrollLeft = scrollLeft;
+                                                                } else if (child.classList.contains('decoration-layer')) {
+                                                                    child.style.transform = `translateY(-${scrollTop}px)`;
+                                                                }
+                                                            });
+                                                        }
                                                         if (lineNumbersRef.current) lineNumbersRef.current.scrollTop = e.target.scrollTop;
                                                     }}
                                                     spellCheck="false"
