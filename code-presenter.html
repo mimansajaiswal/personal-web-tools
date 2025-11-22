@@ -804,13 +804,13 @@
             const [slides, setSlides] = useState(INITIAL_SLIDES);
             const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
             const [isPlaying, setIsPlaying] = useState(false);
-            const [frameSize, setFrameSize] = useState({ width: 800, height: 500 });
+            const [frameSize, setFrameSize] = useState(FRAME_DIMENSIONS.medium.horizontal);
 
             // Preview Mode State
             const [previewSize, setPreviewSize] = useState('large');
 
             // Size Presets State
-            const [activeSize, setActiveSize] = useState('large');
+            const [activeSize, setActiveSize] = useState('medium');
             const [activeShape, setActiveShape] = useState('horizontal');
 
             const [currentThemeKey, setCurrentThemeKey] = useState('carbon');
@@ -1085,8 +1085,14 @@
             // Keyboard nav
             useEffect(() => {
                 const handleKey = (e) => {
-                    if (e.key === 'Escape' && isPlaying) setIsPlaying(false);
-                    if (isPlaying) {
+                    if (e.key === 'Escape') {
+                        if (exportModalOpen) {
+                            setExportModalOpen(false);
+                            return;
+                        }
+                        if (isPlaying) setIsPlaying(false);
+                    }
+                    if (isPlaying && !exportModalOpen) {
                         // Navigation now handled by iframe content mostly, 
                         // but kept here if focus is on parent
                         if (e.key === 'ArrowRight') changeSlide(currentSlideIndex + 1);
@@ -1095,7 +1101,7 @@
                 };
                 window.addEventListener('keydown', handleKey);
                 return () => window.removeEventListener('keydown', handleKey);
-            }, [isPlaying, currentSlideIndex]);
+            }, [isPlaying, currentSlideIndex, exportModalOpen]);
 
             useEffect(() => {
                 if (toastMessage) { const t = setTimeout(() => setToastMessage(null), 3000); return () => clearTimeout(t); }
@@ -1112,7 +1118,7 @@
                 const fontLink = buildGoogleFontUrl(safeFont);
 
                 const styles = `
-                    [id="${id}"] { width:${frameSize.width}px;height:${frameSize.height}px;background:${currentTheme.bg};color:${currentTheme.text};${settings.showFrame ? 'border-radius:12px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.2);' : ''}display:flex;flex-direction:column;font-family:'${safeFont}',monospace;position:relative; }
+                    [id="${id}"] { width:${frameSize.width}px;max-width:100%;min-width:300px;height:${frameSize.height}px;background:${currentTheme.bg};color:${currentTheme.text};${settings.showFrame ? 'border-radius:12px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.2);' : ''}display:flex;flex-direction:column;font-family:'${safeFont}',monospace;position:relative; }
                     [id="${id}"] .h { height:40px;background:${currentTheme.chrome};display:${settings.showFrame ? 'flex' : 'none'};align-items:center;padding:0 16px;border-bottom:1px solid rgba(0,0,0,0.1); }
                     [id="${id}"] .b { flex:1;position:relative;overflow:hidden;display:flex; }
                     [id="${id}"] .ln { overflow:hidden;height:100%;padding-top:32px;padding-bottom:60px;text-align:right;width:40px;opacity:0.4;user-select:none;border-right:1px solid rgba(128,128,128,0.1);display:${settings.showLineNumbers ? 'block' : 'none'};font-size:15px;line-height:1.5;font-family:'${safeFont}',monospace;box-sizing:border-box; }
@@ -1125,13 +1131,10 @@
                     [id="${id}"] .line-decoration { position:absolute;left:0;right:0;height:1.5em; }
                     [id="${id}"] .dimmed { opacity:0.7;filter:blur(2px);transition:all 0.4s ease; }
                     [id="${id}"] .md-view { padding:0;padding-bottom:60px;line-height:0;height:100%;overflow:auto;color:${currentTheme.text};font-family:'Inter',sans-serif;position:relative;z-index:10;box-sizing:border-box; }
-                    [id="${id}"] .md-view h1 { font-size:2em;font-weight:700;margin-bottom:0.5em;line-height:1.5;padding:0 32px;padding-top:32px; }
-                    [id="${id}"] .md-view h2 { font-size:1.5em;font-weight:600;margin-bottom:0.5em;line-height:1.5;padding:0 32px; }
-                    [id="${id}"] .md-view h3 { font-size:1.25em;font-weight:600;margin-bottom:0.5em;line-height:1.5;padding:0 32px; }
-                    [id="${id}"] .md-view h4, [id="${id}"] .md-view h5, [id="${id}"] .md-view h6 { line-height:1.5;padding:0 32px; }
-                    [id="${id}"] .md-view p { margin-bottom:1em;line-height:2;padding:0 32px; }
-                    [id="${id}"] .md-view ul, [id="${id}"] .md-view ol { padding-left:calc(1.5rem + 32px);padding-right:32px;margin:0 0 1em 0;line-height:1.5; }
-                    [id="${id}"] .md-view li { margin-bottom:0.6em;line-height:2;list-style-position:outside; }
+                    [id="${id}"] .md-view h1 { font-size:2em;font-weight:700;}
+                    [id="${id}"] .md-view h2 { font-size:1.5em;font-weight:600;}
+                    [id="${id}"] .md-view h3 { font-size:1.25em;font-weight:600;}
+                    [id="${id}"] .md-view li { line-height:1.5;list-style-position:outside; }
                     [id="${id}"] .md-view code { background:rgba(128,128,128,0.2);padding:2px 4px;border-radius:4px;font-family:'${safeFont}',monospace;font-size:0.9em; }
                     [id="${id}"] .copy-btn { margin-left:auto;background:none;border:none;color:${currentTheme.text};opacity:0.5;cursor:pointer;display:${settings.showCopyButton ? 'block' : 'none'}; }
                     [id="${id}"] .copy-btn-float { position:absolute;top:10px;right:10px;z-index:50;background:${currentTheme.chrome};border-radius:4px;padding:4px;opacity:0.6;color:${currentTheme.text};border:1px solid rgba(128,128,128,0.2);cursor:pointer;display:${settings.showCopyButton && !settings.showFrame ? 'block' : 'none'}; }
@@ -1497,7 +1500,12 @@ runComponent();
 
                     {/* Export Modal */}
                     {exportModalOpen && (
-                        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
+                        <div
+                            className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4"
+                            onClick={(e) => {
+                                if (e.target === e.currentTarget) setExportModalOpen(false);
+                            }}
+                        >
                             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 space-y-4 text-gray-900">
                                 <h3 className="font-bold text-lg">Export HTML Component</h3>
                                 <textarea className="w-full h-64 bg-gray-100 p-3 font-mono text-xs rounded" readOnly value={generateComponent()} />
@@ -1668,7 +1676,7 @@ runComponent();
                                 </select>
                                 <div className="w-px h-4 bg-gray-300"></div>
                                 <select value={currentSlide.language} onChange={(e) => updateSlide('language', e.target.value)} className="bg-transparent text-xs outline-none text-gray-500 cursor-pointer">
-                                    <option value="javascript">JS</option><option value="jsx">JSX</option><option value="python">Python</option><option value="markdown">MD</option>
+                                    <option value="javascript">JS</option><option value="jsx">JSX</option><option value="python">Python</option><option value="markdown">Markdown</option>
                                 </select>
                             </div>
                         )}
