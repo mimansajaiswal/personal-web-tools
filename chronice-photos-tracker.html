@@ -130,7 +130,7 @@
 </head>
 
 <body
-    class="bg-oatmeal text-earth-metal font-sans h-screen flex flex-col md:flex-row overflow-hidden selection:bg-dull-purple selection:text-white">
+    class="bg-oatmeal text-earth-metal font-sans h-[100dvh] flex flex-col md:flex-row overflow-hidden selection:bg-dull-purple selection:text-white">
 
     <!-- Toast Container -->
     <div id="toastContainer"
@@ -204,6 +204,12 @@
         <header
             class="h-16 border-b border-oatmeal-dark flex items-center justify-between px-4 md:px-6 bg-oatmeal/80 backdrop-blur-sm z-10 flex-shrink-0">
             <div class="flex items-center gap-3 overflow-hidden">
+                <!-- Mobile Diary Switcher Trigger -->
+                <button id="mobileDiaryToggleBtn" onclick="App.toggleMobileDiaryMenu(event)"
+                    class="md:hidden p-1 rounded hover:bg-white/50 -ml-1 text-earth-metal">
+                    <i data-lucide="library" class="w-5 h-5"></i>
+                </button>
+
                 <h2 id="activeDiaryTitle" class="font-serif text-xl md:text-2xl text-charcoal truncate">Select a Diary
                 </h2>
                 <span id="syncStatus"
@@ -226,6 +232,14 @@
                 </button>
             </div>
         </header>
+
+        <!-- Mobile Diary Menu (Dropdown/Sheet) -->
+        <div id="mobileDiaryMenu"
+            class="md:hidden hidden absolute top-16 left-0 w-full bg-white-linen shadow-xl border-b border-oatmeal-dark z-20 max-h-[60vh] overflow-y-auto">
+            <div class="p-2" id="mobileDiaryList">
+                <!-- Diaries injected here -->
+            </div>
+        </div>
 
         <!-- Entry Gallery -->
         <div id="entryGallery" class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
@@ -252,6 +266,32 @@
             <div id="connectionStatus" class="mb-6"></div>
 
             <div class="space-y-6">
+
+                <!-- 1. Proxy Settings (First) -->
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-earth-metal">API Proxy
+                                Worker URL</label>
+                            <button onclick="App.openModal('workerHelpModal')"
+                                class="text-dull-purple hover:text-charcoal" title="How to set up Worker">
+                                <i data-lucide="info" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <input type="text" id="settingWorkerUrl" placeholder="https://..."
+                            oninput="App.onSettingInput()"
+                            class="w-full bg-oatmeal border border-oatmeal-dark rounded p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-earth-metal mb-1">Proxy
+                            Secret (Optional)</label>
+                        <input type="password" id="settingProxyToken" placeholder="ALL_CORS_PROXY_MATCH_TOKEN"
+                            oninput="App.onSettingInput()"
+                            class="w-full bg-oatmeal border border-oatmeal-dark rounded p-2 text-sm">
+                    </div>
+                </div>
+
+                <!-- 2. Authentication (Second) -->
                 <div class="bg-oatmeal/50 p-4 rounded-lg border border-oatmeal-dark">
                     <div class="flex justify-between items-center mb-2">
                         <label
@@ -262,8 +302,7 @@
                         </a>
                     </div>
                     <div class="flex gap-2 mb-2">
-                        <button
-                            onclick="window.location.href='https://notion-oauth-handler.mimansa-jaiswal.workers.dev/auth/login?from=/tools/chronice-photos-tracker.html'"
+                        <button onclick="App.saveBeforeOAuth()"
                             class="flex-1 bg-charcoal text-white-linen py-2 rounded flex items-center justify-center gap-2 hover:bg-black transition-colors shadow-sm group">
                             <i data-lucide="zap"
                                 class="w-4 h-4 text-yellow-400 group-hover:text-yellow-300 transition-colors"></i>
@@ -287,29 +326,6 @@
                             class="bg-dull-purple/10 text-dull-purple hover:bg-dull-purple hover:text-white text-xs font-medium px-3 rounded transition-colors border border-dull-purple/20">
                             Verify
                         </button>
-                    </div>
-                </div>
-
-                <div class="space-y-3">
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-earth-metal">API Proxy
-                                Worker URL</label>
-                            <button onclick="App.openModal('workerHelpModal')"
-                                class="text-dull-purple hover:text-charcoal" title="How to set up Worker">
-                                <i data-lucide="info" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                        <input type="text" id="settingWorkerUrl" placeholder="https://..."
-                            oninput="App.onSettingInput()"
-                            class="w-full bg-oatmeal border border-oatmeal-dark rounded p-2 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-earth-metal mb-1">Proxy
-                            Secret (Optional)</label>
-                        <input type="password" id="settingProxyToken" placeholder="ALL_CORS_PROXY_MATCH_TOKEN"
-                            oninput="App.onSettingInput()"
-                            class="w-full bg-oatmeal border border-oatmeal-dark rounded p-2 text-sm">
                     </div>
                 </div>
             </div>
@@ -1153,15 +1169,27 @@ async function handleRequest(request, env) {
                             const el = document.getElementById(id);
                             if (el && !el.classList.contains('hidden')) App.closeModal(id);
                         });
+                        // Close mobile menu on escape
+                        document.getElementById('mobileDiaryMenu').classList.add('hidden');
                     }
                 });
 
-                // Close dropdown if clicked outside
+                // Close dropdowns if clicked outside
                 document.addEventListener('click', (e) => {
+                    // 1. DB Search Dropdown
                     const dropdown = document.getElementById('dbDropdownList');
                     const input = document.getElementById('dbSearchInput');
                     if (dropdown && !dropdown.classList.contains('hidden') && !dropdown.contains(e.target) && e.target !== input) {
                         dropdown.classList.add('hidden');
+                    }
+
+                    // 2. Mobile Diary Menu
+                    const mobMenu = document.getElementById('mobileDiaryMenu');
+                    const isBtn = e.target.closest('#mobileDiaryToggleBtn');
+                    const isMenu = e.target.closest('#mobileDiaryMenu');
+
+                    if (mobMenu && !mobMenu.classList.contains('hidden') && !isMenu && !isBtn) {
+                        mobMenu.classList.add('hidden');
                     }
                 });
 
@@ -1324,7 +1352,11 @@ async function handleRequest(request, env) {
                 Storage.saveDiary(newDiary);
                 App.state.diaries = Storage.getData();
                 App.closeModal('newDiaryModal');
+
+                // Select the diary - this triggers renderSidebar and SyncManager.syncCurrentDiary()
+                // No need to call sync manually again
                 App.selectDiary(newDiary.id);
+
                 App.showToast("Diary Created!", "success");
             },
 
@@ -1341,6 +1373,38 @@ async function handleRequest(request, env) {
                 } catch (e) {
                     console.error(e);
                     App.showToast("Failed to clear storage automatically. Please clear browser cache.", "error");
+                }
+            },
+
+            // Mobile Specific: Diary Switching
+            toggleMobileDiaryMenu: (e) => {
+                if (e) e.stopPropagation(); // Prevent immediate closure by document click listener
+
+                const menu = document.getElementById('mobileDiaryMenu');
+                const list = document.getElementById('mobileDiaryList');
+
+                if (menu.classList.contains('hidden')) {
+                    menu.classList.remove('hidden');
+                    list.innerHTML = '';
+
+                    if (App.state.diaries.length === 0) {
+                        list.innerHTML = `<div class="p-4 text-center text-xs text-earth-metal/50">No diaries yet.</div>`;
+                    } else {
+                        App.state.diaries.forEach(diary => {
+                            const isActive = diary.id === App.state.activeDiaryId;
+                            const div = document.createElement('div');
+                            div.className = `p-3 rounded-lg cursor-pointer flex items-center justify-between mb-1 ${isActive ? 'bg-oatmeal-dark/30 font-bold text-dull-purple' : 'hover:bg-white'}`;
+                            div.onclick = () => {
+                                App.selectDiary(diary.id);
+                                menu.classList.add('hidden');
+                            };
+                            div.innerHTML = `<span>${diary.title}</span> ${isActive ? '<i data-lucide="check" class="w-4 h-4"></i>' : ''}`;
+                            list.appendChild(div);
+                        });
+                        lucide.createIcons();
+                    }
+                } else {
+                    menu.classList.add('hidden');
                 }
             },
 
@@ -1501,8 +1565,11 @@ async function handleRequest(request, env) {
                 App.renderDiaryView();
                 // Close mobile sidebar if open
                 if (window.innerWidth < 768) {
-                    document.getElementById('sidebar').classList.add('-translate-x-full');
-                    document.getElementById('mobileSidebarOverlay').classList.add('hidden');
+                    const sidebar = document.getElementById('sidebar');
+                    if (sidebar) sidebar.classList.add('-translate-x-full');
+                    // Remove overlay reference or check existence
+                    const overlay = document.getElementById('mobileSidebarOverlay');
+                    if (overlay) overlay.classList.add('hidden');
                 }
                 SyncManager.syncCurrentDiary();
             },
@@ -2113,24 +2180,68 @@ async function handleRequest(request, env) {
             },
             populateSettingsInputs: () => {
                 const s = Storage.getSettings();
-                document.getElementById('settingAuthToken').value = s.authToken || '';
+                // Don't show token if it is OAuth (doesn't start with secret_)
+                const isSecret = s.authToken && s.authToken.startsWith('secret_');
+                document.getElementById('settingAuthToken').value = isSecret ? s.authToken : '';
                 document.getElementById('settingWorkerUrl').value = s.workerUrl || '';
                 document.getElementById('settingProxyToken').value = s.proxyToken || '';
-                document.getElementById('saveSettingsBtn').disabled = false;
+
+                // Check if we should enable save
+                // If connected via OAuth and Worker URL is present, enable save
+                const isOAuth = s.authToken && !s.authToken.startsWith('secret_');
+                const hasWorker = !!s.workerUrl;
+
+                if (isOAuth && hasWorker) {
+                    document.getElementById('saveSettingsBtn').disabled = false;
+                } else if (isSecret && hasWorker) {
+                    // If manual key exists and worker exists, assume valid
+                    document.getElementById('saveSettingsBtn').disabled = false;
+                } else {
+                    // Otherwise disable save until verified/changed
+                    document.getElementById('saveSettingsBtn').disabled = true;
+                }
             },
             onSettingInput: () => {
-                document.getElementById('saveSettingsBtn').disabled = true;
+                // If worker URL is typed while OAuth connected, we can allow saving?
+                // Let's keep strict: disable save on any input until verified (for manual)
+                // For Worker URL change, we ideally want verification too, but basic save is okay if Auth is solid.
+                // To simplify: any input disables save until "Verify" (for manual) or just re-check (for OAuth)
+
+                const s = Storage.getSettings();
+                const isOAuth = s.authToken && !s.authToken.startsWith('secret_');
+
+                // If OAuth, we only care about Worker URL being present.
+                // If Manual, we need explicit verification.
+
+                if (isOAuth) {
+                    // If OAuth, allow saving if Worker URL is present
+                    const workerUrl = document.getElementById('settingWorkerUrl').value;
+                    document.getElementById('saveSettingsBtn').disabled = !workerUrl;
+                } else {
+                    // Manual or Disconnected: Disable save until Verify clicked
+                    document.getElementById('saveSettingsBtn').disabled = true;
+                }
+
                 const statusEl = document.getElementById('connectionStatus');
                 statusEl.innerHTML = `
                     <div class="flex items-start gap-3 text-charcoal bg-gray-100 p-3 rounded-lg border border-gray-200 text-xs">
                         <div class="bg-white p-1 rounded-full shadow-sm mt-0.5"><i data-lucide="edit-3" class="w-4 h-4 text-gray-500"></i></div>
                         <div class="flex-1">
                             <strong class="block text-sm mb-0.5">Unsaved Changes</strong>
-                            <span class="opacity-80">Please verify your manual key to save changes.</span>
+                            <span class="opacity-80">Please verify settings to save changes.</span>
                         </div>
                     </div>
                 `;
                 lucide.createIcons();
+            },
+            saveBeforeOAuth: () => {
+                const workerUrl = document.getElementById('settingWorkerUrl').value;
+                const proxyToken = document.getElementById('settingProxyToken').value;
+                // Save partial settings
+                const current = Storage.getSettings();
+                Storage.setSettings({ ...current, workerUrl, proxyToken });
+                // Redirect
+                window.location.href = 'https://notion-oauth-handler.mimansa-jaiswal.workers.dev/auth/login?from=/tools/chronice-photos-tracker.html';
             },
             testManualConnection: async (btn) => {
                 const workerUrl = document.getElementById('settingWorkerUrl').value;
@@ -2165,9 +2276,17 @@ async function handleRequest(request, env) {
             },
             saveSettings: () => {
                 const workerUrl = document.getElementById('settingWorkerUrl').value;
-                const authToken = document.getElementById('settingAuthToken').value;
+                // If auth token input is empty (because hidden for OAuth), keep existing token
+                const inputToken = document.getElementById('settingAuthToken').value;
+                const currentSettings = Storage.getSettings();
+
+                let finalToken = inputToken;
+                if (!inputToken && currentSettings.authToken && !currentSettings.authToken.startsWith('secret_')) {
+                    finalToken = currentSettings.authToken;
+                }
+
                 const proxyToken = document.getElementById('settingProxyToken').value;
-                Storage.setSettings({ workerUrl, authToken, proxyToken });
+                Storage.setSettings({ workerUrl, authToken: finalToken, proxyToken });
                 App.closeModal('settingsModal');
                 App.showToast("Saved", "success");
                 App.renderWelcomeState();
