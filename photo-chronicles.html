@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chronicle Photos Tracker w/ Notion</title>
+    <title>Photo Chronicles</title>
 
     <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -149,8 +149,8 @@
                 <i data-lucide="history" class="w-5 h-5"></i>
             </div>
             <div class="flex flex-col">
-                <h1 class="font-serif text-lg text-charcoal tracking-wide leading-none">Chronicle</h1>
-                <span class="text-[9px] uppercase tracking-widest text-earth-metal/60">Photos Tracker w/ Notion</span>
+                <h1 class="font-serif text-lg text-charcoal tracking-wide leading-none">Photo Chronicles</h1>
+                <span class="text-[9px] uppercase tracking-widest text-earth-metal/60">with Notion</span>
             </div>
         </div>
 
@@ -1458,7 +1458,7 @@ async function handleRequest(request, env) {
                         <div class="h-full flex flex-col items-center justify-center text-center gap-4">
                             <div class="bg-dull-purple/10 p-4 rounded-full"><i data-lucide="plug" class="w-10 h-10 text-dull-purple"></i></div>
                             <div>
-                                <h3 class="font-serif text-2xl text-charcoal mb-2">Welcome to Chronicle Photos Tracker w/ Notion</h3>
+                                <h3 class="font-serif text-2xl text-charcoal mb-2">Welcome to Photo Chronicles w/ Notion</h3>
                                 <p class="text-earth-metal/60 max-w-xs mx-auto mb-6">Connect your Notion workspace to start tracking your progress.</p>
                                 <div class="p-4 text-[10px] text-earth-metal/50 leading-tight border-t border-oatmeal-dark/50 bg-oatmeal/30 mb-6">
                                     <i data-lucide="info" class="w-3 h-3 inline mb-0.5 mr-1"></i>
@@ -2241,7 +2241,7 @@ async function handleRequest(request, env) {
                 const current = Storage.getSettings();
                 Storage.setSettings({ ...current, workerUrl, proxyToken });
                 // Redirect
-                window.location.href = 'https://notion-oauth-handler.mimansa-jaiswal.workers.dev/auth/login?from=/tools/chronice-photos-tracker.html';
+                window.location.href = 'https://notion-oauth-handler.mimansa-jaiswal.workers.dev/auth/login?from=/tools/photo-chronicles.html';
             },
             testManualConnection: async (btn) => {
                 const workerUrl = document.getElementById('settingWorkerUrl').value;
